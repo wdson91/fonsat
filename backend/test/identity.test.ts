@@ -77,6 +77,84 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
       ).status,
     ).toBe(401);
   });
+  it("ignora empresa e papel inventados no browser", async () => {
+    const selected = user("worker");
+    const response = await request(app.getHttpServer())
+      .get(`/api/me?company_id=${companyB}&role=admin`)
+      .set("X-User-Id", String(selected.id))
+      .set("X-Company-Id", String(companyB))
+      .set("X-Role", "admin");
+    expect(response.body).toMatchObject({
+      id: selected.id,
+      role: "worker",
+      company_id: companyA,
+    });
+    const forbidden = await request(app.getHttpServer())
+      .get("/api/sites")
+      .set("X-User-Id", String(selected.id))
+      .set("X-Role", "admin");
+    expect(forbidden.status).toBe(403);
+  });
+
+  it.each(["worker", "client"] as const)(
+    "o perfil %s não consulta a operação das obras",
+    async (role) => {
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get("/api/sites")
+            .set("X-User-Id", String(user(role).id))
+        ).status,
+      ).toBe(403);
+    },
+  );
+  it("o administrativo vê só as obras da sua empresa, mesmo com nomes iguais", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/api/sites")
+      .set("X-User-Id", String(user("admin").id));
+    const expected = await db.inCompany(companyA, (tx) => tx.site.findMany());
+    expect(response.status).toBe(200);
+    expect(response.body.map((s: { id: number }) => s.id).sort()).toEqual(
+      expected.map((s) => s.id).sort(),
+    );
+    expect(response.body.length).toBe(2);
+  });
+  it("o encarregado vê apenas a obra sob a sua responsabilidade ativa", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/api/sites")
+      .set("X-User-Id", String(user("foreman").id));
+    expect(response.status).toBe(200);
+    expect(response.body.map((s: { name: string }) => s.name)).toEqual([
+      "Edifício Aurora",
+    ]);
+  });
+  it("o encarregado recebe 404 para a obra de outro responsável", async () => {
+    const other = await db.inCompany(companyA, (tx) =>
+      tx.site.findFirstOrThrow({ where: { name: "Armazém Norte" } }),
+    );
+    expect(
+      (
+        await request(app.getHttpServer())
+          .get(`/api/sites/${other.id}`)
+          .set("X-User-Id", String(user("foreman").id))
+      ).status,
+    ).toBe(404);
+  });
+  it.each(["admin", "foreman"] as const)(
+    "o perfil %s recebe 404 para identificadores de outra empresa",
+    async (role) => {
+      const other = await db.inCompany(companyB, (tx) =>
+        tx.site.findFirstOrThrow(),
+      );
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`/api/sites/${other.id}`)
+            .set("X-User-Id", String(user(role).id))
+        ).status,
+      ).toBe(404);
+    },
+  );
 
   it("o papel da aplicação não é proprietário, superutilizador ou BYPASSRLS", async () => {
     const [role] = await db.$queryRaw<
