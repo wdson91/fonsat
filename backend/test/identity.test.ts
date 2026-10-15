@@ -53,4 +53,28 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
       expect(response.headers["cache-control"]).toBe("no-store");
     },
   );
+
+  it("recusa um pedido sem identidade", async () => {
+    expect((await request(app.getHttpServer()).get("/api/me")).status).toBe(
+      401,
+    );
+  });
+  it.each(["", "abc", "0", "-1", "1.1", "2147483648", "1,2"])(
+    "recusa o identificador inválido %j",
+    async (id) => {
+      expect(
+        (await request(app.getHttpServer()).get("/api/me").set("X-User-Id", id))
+          .status,
+      ).toBe(401);
+    },
+  );
+  it("recusa um utilizador inexistente", async () => {
+    expect(
+      (
+        await request(app.getHttpServer())
+          .get("/api/me")
+          .set("X-User-Id", "2147483647")
+      ).status,
+    ).toBe(401);
+  });
 });
