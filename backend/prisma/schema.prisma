@@ -6,8 +6,53 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+enum UserRole {
+  worker
+  foreman
+  admin
+  client
+}
 model Company {
   id Int @id @default(autoincrement())
   name String @unique
+  brandColor String @default("#ec405c") @map("brand_color")
+  timeZone String @default("Europe/Lisbon") @map("time_zone")
+  users DemoUser[]
+  sites Site[]
+  responsibilities SiteResponsibility[]
   @@map("companies")
+}
+model DemoUser {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  name String
+  role UserRole
+  company Company @relation(fields: [companyId], references: [id])
+  responsibilities SiteResponsibility[]
+  @@unique([companyId, id])
+  @@unique([companyId, name])
+  @@map("demo_users")
+}
+model Site {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  name String
+  company Company @relation(fields: [companyId], references: [id])
+  responsibilities SiteResponsibility[]
+  @@unique([companyId, id])
+  @@unique([companyId, name])
+  @@map("sites")
+}
+model SiteResponsibility {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  siteId Int @map("site_id")
+  userId Int @map("user_id")
+  startsOn DateTime @db.Date @map("starts_on")
+  endsOn DateTime? @db.Date @map("ends_on")
+  company Company @relation(fields: [companyId], references: [id])
+  site Site @relation(fields: [companyId, siteId], references: [companyId, id])
+  user DemoUser @relation(fields: [companyId, userId], references: [companyId, id])
+  @@unique([companyId, siteId, userId, startsOn])
+  @@map("site_responsibilities")
 }
