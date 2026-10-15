@@ -44,3 +44,53 @@ for (const [name, title] of [
     }
   });
 }
+test("mantém a seleção após reload e volta ao seletor sem dados antigos", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: /Sofia Ramos/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Visão geral", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Visão geral", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Escolher outro utilizador" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Quem está a usar?" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Edifício Aurora" }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() => localStorage.getItem("fonsat.userId")),
+  ).toBeNull();
+});
+test("troca de empresa e mantém as obras isoladas mesmo com nomes iguais", async ({
+  page,
+  request,
+}) => {
+  const users = await (await request.get("/api/demo-users")).json();
+  const first = users.find((u: { name: string }) => u.name === "Sofia Ramos");
+  const second = users.find((u: { name: string }) => u.name === "Ana Martins");
+  const firstSites = await (
+    await request.get("/api/sites", {
+      headers: { "X-User-Id": String(first.id) },
+    })
+  ).json();
+  await page.getByRole("button", { name: /Sofia Ramos/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Visão geral", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Trocar de utilizador" })
+    .selectOption(String(second.id));
+  await expect(page.locator(".sidebar-company")).toContainText(
+    "Construções Horizonte",
+  );
+  await expect(page.getByText("Olá, Ana.")).toBeVisible();
+  const response = await request.get(`/api/sites/${firstSites[0].id}`, {
+    headers: { "X-User-Id": String(second.id) },
+  });
+  expect(response.status()).toBe(404);
+});
