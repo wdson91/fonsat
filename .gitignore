@@ -11,3 +11,4 @@ playwright-report/
 *:Zone.Identifier
 # Projeto anterior mantido apenas como referência local.
 /fonsat/
+backend/src/generated/
