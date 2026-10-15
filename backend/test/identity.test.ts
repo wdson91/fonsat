@@ -208,4 +208,59 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     ).rejects.toThrow("rollback intencional");
     expect(await db.site.findMany()).toEqual([]);
   });
+  it("o banco impede alterar ou criar obras de outra empresa", async () => {
+    const other = await db.inCompany(companyB, (tx) =>
+      tx.site.findFirstOrThrow(),
+    );
+    const changed = await db.inCompany(companyA, (tx) =>
+      tx.site.updateMany({
+        where: { id: other.id },
+        data: { name: "Não pode mudar" },
+      }),
+    );
+    expect(changed.count).toBe(0);
+    await expect(
+      db.inCompany(companyA, (tx) =>
+        tx.site.create({
+          data: { companyId: companyB, name: "Não pode criar" },
+        }),
+      ),
+    ).rejects.toThrow();
+    expect(
+      (
+        await db.inCompany(companyB, (tx) =>
+          tx.site.findUniqueOrThrow({ where: { id: other.id } }),
+        )
+      ).name,
+    ).toBe(other.name);
+  });
+  it("chaves compostas recusam responsabilidade com utilizador de outra empresa", async () => {
+    const site = await db.inCompany(companyA, (tx) =>
+      tx.site.findFirstOrThrow(),
+    );
+    await expect(
+      db.inCompany(companyA, (tx) =>
+        tx.siteResponsibility.create({
+          data: {
+            companyId: companyA,
+            siteId: site.id,
+            userId: user("foreman", companyB).id,
+            startsOn: new Date("2030-01-01T00:00:00Z"),
+          },
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+  it("repetir o seed não duplica dados nem altera os identificadores", async () => {
+    const before = await db.$queryRaw`SELECT * FROM public.app_demo_users()`;
+    execFileSync("npm", ["run", "db:seed"], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: "pipe",
+    });
+    expect(await db.$queryRaw`SELECT * FROM public.app_demo_users()`).toEqual(
+      before,
+    );
+    expect(await db.inCompany(companyA, (tx) => tx.site.count())).toBe(2);
+  });
 });
