@@ -1,0 +1,25 @@
+name: fonsat-test
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fonsat
+      POSTGRES_PASSWORD: fonsat_test_only
+      POSTGRES_DB: fonsat_test
+      APP_DB_PASSWORD: fonsat_app_test_only
+    tmpfs: [/var/lib/postgresql/data]
+    volumes: ['./db/init:/docker-entrypoint-initdb.d:ro']
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U fonsat -d fonsat_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  tests:
+    build: {context: ., target: dependencies}
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://fonsat_app:fonsat_app_test_only@db:5432/fonsat_test
+      ADMIN_DATABASE_URL: postgresql://fonsat:fonsat_test_only@db:5432/fonsat_test
+    command: sh -c 'npm run db:migrate && npm run db:seed && npm test && npm run typecheck'
+    depends_on:
+      db: {condition: service_healthy}
