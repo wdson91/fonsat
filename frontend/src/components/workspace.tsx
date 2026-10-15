@@ -156,3 +156,149 @@ function Picker({
     </main>
   );
 }
+
+function Dashboard({
+  me,
+  sites,
+  users,
+  onSelect,
+}: {
+  me: CurrentUser;
+  sites: Site[];
+  users: DemoUser[];
+  onSelect: (id: number | null) => void;
+}) {
+  const home = HOME[me.role];
+  const staff = me.role === "admin" || me.role === "foreman";
+  return (
+    <div className="workspace">
+      <aside className="sidebar">
+        <Mark />
+        <div className="sidebar-company">
+          <span className="company-icon" aria-hidden="true">
+            ▦
+          </span>
+          <strong>{me.company_name}</strong>
+        </div>
+        <nav aria-label="Principal">
+          <a className="nav-active" href="/" aria-current="page">
+            <span aria-hidden="true">◫</span>
+            {home.title}
+          </a>
+        </nav>
+        <div className="sidebar-bottom">
+          <span className="demo-label">
+            <span />
+            Demonstração
+          </span>
+          <p>Gestão de equipas e horas</p>
+        </div>
+      </aside>
+      <div className="workspace-body">
+        <header className="topbar">
+          <p className="breadcrumb">
+            {me.company_name}
+            <span>/</span>
+            {home.title}
+          </p>
+          <label className="switcher">
+            <span className="sr-only">Trocar de utilizador</span>
+            <select
+              value={me.id}
+              onChange={(event) =>
+                onSelect(event.target.value ? Number(event.target.value) : null)
+              }
+            >
+              <option value="">Escolher outro utilizador…</option>
+              {companies(users).map(([id, group]) => (
+                <optgroup key={id} label={group.name}>
+                  {group.users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} · {ROLE_LABEL[user.role]}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+        </header>
+        <main className="dashboard">
+          <div className="dashboard-heading">
+            <div>
+              <p className="eyebrow">{ROLE_LABEL[me.role]}</p>
+              <h1>{home.title}</h1>
+              <p>{home.subtitle}</p>
+            </div>
+            <span className={`avatar avatar--${me.role}`} aria-hidden="true">
+              {initials(me.name)}
+            </span>
+          </div>
+          <section className="welcome">
+            <div>
+              <h2>Olá, {me.name.split(" ")[0]}.</h2>
+              <p>
+                Está no ambiente da <strong>{me.company_name}</strong>.
+              </p>
+            </div>
+            <span className="role-badge">{ROLE_LABEL[me.role]}</span>
+          </section>
+          {staff ? (
+            <section className="site-section" aria-labelledby="sites-title">
+              <div className="section-heading">
+                <h2 id="sites-title">
+                  {me.role === "admin"
+                    ? "Obras da empresa"
+                    : "Sob a sua responsabilidade"}
+                </h2>
+                <span className="count-badge">{sites.length}</span>
+              </div>
+              {sites.length === 0 ? (
+                <p className="empty">
+                  Ainda não existem obras disponíveis para este perfil.
+                </p>
+              ) : (
+                <div className="site-grid">
+                  {sites.map((site) => (
+                    <article className="site-card" key={site.id}>
+                      <span className="site-icon" aria-hidden="true">
+                        ▥
+                      </span>
+                      <h3>{site.name}</h3>
+                      <p>{me.company_name}</p>
+                      <span className="site-label">
+                        <span />
+                        Em acompanhamento
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="empty-state">
+              <span className="empty-icon" aria-hidden="true">
+                {me.role === "worker" ? "◷" : "▤"}
+              </span>
+              <h2>
+                {me.role === "worker"
+                  ? "O seu espaço de trabalho"
+                  : "Os seus documentos, num só lugar"}
+              </h2>
+              <p>
+                {me.role === "worker"
+                  ? "O registo de ponto ainda não está disponível."
+                  : "A consulta de faturas ainda não está disponível."}
+              </p>
+            </section>
+          )}
+          <footer className="dashboard-footer">
+            <span>FONSAT · Gestão de equipas</span>
+            <button className="quiet" onClick={() => onSelect(null)}>
+              Escolher outro utilizador
+            </button>
+          </footer>
+        </main>
+      </div>
+    </div>
+  );
+}
