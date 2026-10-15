@@ -1,14 +1,14 @@
 import { Controller, Get, Header } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service";
-import { Actor, CurrentUser, DemoUser, Public } from "./identity";
+import { IdentityService } from "./identity.service";
+import { Actor, CurrentUser, Public } from "./identity";
 @Controller()
 export class IdentityController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly identityService: IdentityService) {}
   @Public()
   @Get("demo-users")
   @Header("Cache-Control", "no-store")
   listUsers() {
-    return this.prisma.$queryRaw<DemoUser[]>`SELECT * FROM public.app_demo_users()`;
+    return this.identityService.listDemoUsers();
   }
   @Get("me")
   @Header("Cache-Control", "no-store")

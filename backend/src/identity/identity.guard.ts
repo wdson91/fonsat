@@ -6,12 +6,12 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { PrismaService } from "../database/prisma.service";
-import type { CurrentUser, Role } from "./identity";
+import { IdentityService } from "./identity.service";
+import type { Role } from "./identity";
 @Injectable()
 export class IdentityGuard implements CanActivate {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly identityService: IdentityService,
     private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext) {
@@ -27,16 +27,14 @@ export class IdentityGuard implements CanActivate {
     ) {
       throw new UnauthorizedException("Selecione um utilizador válido.");
     }
-    const users = await this.prisma.$queryRaw<
-      CurrentUser[]
-    >`SELECT * FROM public.app_resolve_user(${Number(header)}::integer)`;
-    if (!users[0])
+    const user = await this.identityService.resolveUser(Number(header));
+    if (!user)
       throw new UnauthorizedException(
         "Utilizador desconhecido. Volte a selecionar.",
       );
-    request.actor = users[0];
+    request.actor = user;
     const roles = this.reflector.getAllAndOverride<Role[]>("roles", targets);
-    if (roles && !roles.includes(users[0].role))
+    if (roles && !roles.includes(user.role))
       throw new ForbiddenException(
         "Este perfil não tem acesso a esta operação.",
       );
