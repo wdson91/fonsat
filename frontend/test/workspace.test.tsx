@@ -141,3 +141,74 @@ it("pede nova seleção quando o servidor recusa o identificador", async () => {
   );
   expect(localStorage.getItem("fonsat.userId")).toBeNull();
 });
+it("permite tentar novamente se a listagem falhar", async () => {
+  vi.mocked(listDemoUsers).mockRejectedValueOnce(
+    new ApiError(0, "Sem ligação."),
+  );
+  render(<Workspace />);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Sem ligação.");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Tentar novamente" }),
+  );
+  expect(
+    await screen.findByRole("button", { name: /João Silva/ }),
+  ).toBeInTheDocument();
+});
+it("recupera de uma falha ao abrir o ambiente sem apagar a seleção", async () => {
+  localStorage.setItem("fonsat.userId", "3");
+  vi.mocked(getMe).mockRejectedValueOnce(new ApiError(0, "Sem ligação."));
+  render(<Workspace />);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Sem ligação.");
+  expect(localStorage.getItem("fonsat.userId")).toBe("3");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Tentar novamente" }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Visão geral", level: 1 }),
+  ).toBeInTheDocument();
+});
+it("não mostra a resposta antiga depois de trocar de utilizador", async () => {
+  localStorage.setItem("fonsat.userId", "3");
+  let finishOldRequest!: (me: CurrentUser) => void;
+  vi.mocked(getMe).mockImplementation((id) =>
+    id === 5
+      ? new Promise((resolve) => {
+          finishOldRequest = resolve;
+        })
+      : Promise.resolve(current(id)),
+  );
+  render(<Workspace />);
+  await screen.findByRole("heading", { name: "Visão geral", level: 1 });
+  const picker = screen.getByRole("combobox", { name: "Trocar de utilizador" });
+  await userEvent.selectOptions(picker, "5");
+  await waitFor(() => expect(finishOldRequest).toBeTypeOf("function"));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Escolher outro utilizador" }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: /João Silva/ }),
+  );
+  await screen.findByRole("heading", { name: "O meu dia", level: 1 });
+  // Mesmo um transporte que ignora o cancelamento não pode publicar a resposta antiga.
+  await act(async () => {
+    finishOldRequest(current(5));
+  });
+  expect(screen.getByText("Olá, João.")).toBeInTheDocument();
+  expect(screen.queryByText("Olá, André.")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Edifício Aurora" }),
+  ).not.toBeInTheDocument();
+});
+it("a escolha funciona em memória quando não é possível persistir no browser", async () => {
+  const save = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("bloqueado");
+  });
+  render(<Workspace />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /João Silva/ }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "O meu dia", level: 1 }),
+  ).toBeInTheDocument();
+  save.mockRestore();
+});
