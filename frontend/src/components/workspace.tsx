@@ -73,6 +73,144 @@ function Mark() {
   );
 }
 
+export function Workspace() {
+  const [ready, setReady] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [users, setUsers] = useState<DemoUser[]>([]);
+  const [listError, setListError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [context, setContext] = useState<{
+    me: CurrentUser;
+    sites: Site[];
+  } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && /^[1-9]\d*$/.test(saved) && Number(saved) <= 2147483647)
+        setSelected(Number(saved));
+      else if (saved) remember(null);
+    } catch {
+      /* Pode continuar sem persistência. */
+    }
+    setReady(true);
+  }, []);
+
+  const select = useCallback((id: number | null) => {
+    setContext(null);
+    setError(null);
+    remember(id);
+    setSelected(id);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    setListError(null);
+    listDemoUsers(controller.signal)
+      .then((data) => {
+        if (active) setUsers(data);
+      })
+      .catch((error) => {
+        if (active)
+          setListError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível carregar os utilizadores.",
+          );
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [attempt]);
+
+  useEffect(() => {
+    if (!ready || selected === null) return;
+    let active = true;
+    const controller = new AbortController();
+    setError(null);
+    async function load() {
+      try {
+        const me = await getMe(selected!, controller.signal);
+        if (!active) return;
+        const sites =
+          me.role === "admin" || me.role === "foreman"
+            ? await getSites(selected!, controller.signal)
+            : [];
+        if (active) setContext({ me, sites });
+      } catch (failure) {
+        if (!active) return;
+        if (failure instanceof ApiError && failure.status === 401) {
+          select(null);
+          setError(
+            "A seleção já não é válida. Escolha novamente quem está a usar.",
+          );
+        } else
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : "Não foi possível abrir o ambiente.",
+          );
+      }
+    }
+    void load();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [ready, selected, attempt, select]);
+
+  const retry = () => setAttempt((value) => value + 1);
+  if (!ready)
+    return (
+      <main className="loading" role="status">
+        A preparar o seu ambiente…
+      </main>
+    );
+  if (selected === null)
+    return (
+      <Picker
+        users={users}
+        error={error ?? listError}
+        onSelect={select}
+        onRetry={retry}
+      />
+    );
+  if (!context || context.me.id !== selected)
+    return (
+      <main className="loading">
+        <Mark />
+        {error ? (
+          <>
+            <p role="alert">{error}</p>
+            <button className="primary" onClick={retry}>
+              Tentar novamente
+            </button>
+            <button className="quiet" onClick={() => select(null)}>
+              Escolher outro utilizador
+            </button>
+          </>
+        ) : (
+          <>
+            <p role="status">A abrir o ambiente…</p>
+            <button className="quiet" onClick={() => select(null)}>
+              Escolher outro utilizador
+            </button>
+          </>
+        )}
+      </main>
+    );
+  return (
+    <Dashboard
+      me={context.me}
+      sites={context.sites}
+      users={users}
+      onSelect={select}
+    />
+  );
+}
 
 function Picker({
   users,
