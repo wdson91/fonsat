@@ -77,4 +77,57 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
       ).status,
     ).toBe(401);
   });
+
+  it("o papel da aplicação não é proprietário, superutilizador ou BYPASSRLS", async () => {
+    const [role] = await db.$queryRaw<
+      { rolname: string; rolsuper: boolean; rolbypassrls: boolean }[]
+    >`SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = CURRENT_USER`;
+    expect(role).toEqual({
+      rolname: "fonsat_app",
+      rolsuper: false,
+      rolbypassrls: false,
+    });
+    const owners = await db.$queryRaw<
+      { owned: boolean }[]
+    >`SELECT (pg_get_userbyid(relowner) = CURRENT_USER) AS owned FROM pg_class WHERE oid IN ('public.companies'::regclass, 'public.demo_users'::regclass, 'public.sites'::regclass, 'public.site_responsibilities'::regclass)`;
+    expect(owners).toHaveLength(4);
+    expect(owners.every((row) => !row.owned)).toBe(true);
+  });
+  it("sem contexto, consultas sem filtros não veem dados operacionais", async () => {
+    expect(await db.company.findMany()).toEqual([]);
+    expect(await db.demoUser.findMany()).toEqual([]);
+    expect(await db.site.findMany()).toEqual([]);
+    expect(await db.siteResponsibility.findMany()).toEqual([]);
+  });
+  it("isola uma consulta sem filtro e não deixa contexto na conexão", async () => {
+    for (const company of [companyA, companyB, companyA]) {
+      const rows = await db.inCompany(company, (tx) => tx.site.findMany());
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((row) => row.companyId === company)).toBe(true);
+    }
+    expect(await db.site.findMany()).toEqual([]);
+  });
+  it("mantém contextos separados em operações concorrentes", async () => {
+    const companies = Array.from({ length: 12 }, (_, i) =>
+      i % 2 ? companyA : companyB,
+    );
+    const results = await Promise.all(
+      companies.map((company) =>
+        db.inCompany(company, (tx) => tx.site.findMany()),
+      ),
+    );
+    results.forEach((rows, i) => {
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((row) => row.companyId === companies[i])).toBe(true);
+    });
+    expect(await db.site.findMany()).toEqual([]);
+  });
+  it("uma falha de transação não conserva o tenant", async () => {
+    await expect(
+      db.inCompany(companyA, async () => {
+        throw new Error("rollback intencional");
+      }),
+    ).rejects.toThrow("rollback intencional");
+    expect(await db.site.findMany()).toEqual([]);
+  });
 });
