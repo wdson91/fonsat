@@ -2,7 +2,6 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
-  Inject,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -12,8 +11,8 @@ import type { CurrentUser, Role } from "./identity";
 @Injectable()
 export class IdentityGuard implements CanActivate {
   constructor(
-    @Inject(PrismaService) private readonly db: PrismaService,
-    @Inject(Reflector) private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
+    private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext) {
     const targets = [context.getHandler(), context.getClass()];
@@ -28,7 +27,7 @@ export class IdentityGuard implements CanActivate {
     ) {
       throw new UnauthorizedException("Selecione um utilizador válido.");
     }
-    const users = await this.db.$queryRaw<
+    const users = await this.prisma.$queryRaw<
       CurrentUser[]
     >`SELECT * FROM public.app_resolve_user(${Number(header)}::integer)`;
     if (!users[0])

@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Header,
-  Inject,
   NotFoundException,
   Param,
   ParseIntPipe,
@@ -32,11 +31,11 @@ function scope(user: CurrentUser): Prisma.SiteWhereInput {
 @Controller("sites")
 @Roles("admin", "foreman")
 export class SitesController {
-  constructor(@Inject(PrismaService) private readonly db: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
   @Get()
   @Header("Cache-Control", "no-store")
   list(@Actor() user: CurrentUser) {
-    return this.db.inCompany(user.company_id, (tx) =>
+    return this.prisma.inCompany(user.company_id, (tx) =>
       tx.site.findMany({
         where: scope(user),
         select: { id: true, name: true },
@@ -50,7 +49,7 @@ export class SitesController {
     @Actor() user: CurrentUser,
     @Param("id", ParseIntPipe) id: number,
   ) {
-    const site = await this.db.inCompany(user.company_id, (tx) =>
+    const site = await this.prisma.inCompany(user.company_id, (tx) =>
       tx.site.findFirst({
         where: { ...scope(user), id },
         select: { id: true, name: true },
