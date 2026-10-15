@@ -20,7 +20,7 @@ Preparar o ambiente reproduzível e implementar «Quem está a usar?», seleçã
 
 O histórico será construído com commits durante o desenvolvimento, por entrega validada. As fases de distribuição, marcações e faturação serão implementadas em entregas posteriores.
 
-As instruções de execução e resultados de validação serão acrescentados à medida que cada entrega estiver concluída.
+A primeira entrega está concluída. As instruções e os resultados de validação estão abaixo e em `docs/progresso.md`.
 
 ## Executar
 
@@ -40,6 +40,33 @@ Os testes usam outro projeto Compose e PostgreSQL efémero, sem portas publicada
 
 ## Desenvolvimento local
 
-Node 22.12 ou superior da série 22, npm e PostgreSQL 16. Na raiz: `npm ci` e `npm run db:generate`. Configurar `DATABASE_URL` para o papel de aplicação e `ADMIN_DATABASE_URL` para migrações/dados; depois executar `npm run db:migrate` e `npm run db:seed`. Em terminais separados: `npm run dev:backend` e `npm run dev:frontend`.
+Node 22.12 ou superior da série 22, npm e PostgreSQL 16. O banco deve ter o papel `fonsat_app` preparado pelo script `db/init/01-app-role.sh`; no arranque por Docker isso é automático. Na raiz: `npm ci` e `npm run db:generate`. Configurar `DATABASE_URL` para o papel de aplicação e `ADMIN_DATABASE_URL` para migrações/dados; depois executar `npm run db:migrate` e `npm run db:seed`. Em terminais separados: `npm run dev:backend` e `npm run dev:frontend`.
 
 `npm run build` compila as duas aplicações. `npm run typecheck` valida os tipos. A conexão do backend usa um papel distinto do proprietário das tabelas. A conta de migrações é usada pelo serviço `setup`, separado da API.
+
+## Selecionar utilizadores
+
+O ecrã «Quem está a usar?» agrupa os utilizadores por empresa. Na FONSAT, João Silva é trabalhador, Carlos Mendes e Rita Santos são encarregados, Sofia Ramos é administrativa, Mota Obras e Teixeira Construções são clientes. Na Construções Horizonte existem perfis equivalentes.
+
+A escolha fica guardada no browser e pode ser trocada no topo ou limpa em «Escolher outro utilizador». A identidade é enviada em `X-User-Id`; a API resolve o papel e a empresa. O administrativo vê as obras da empresa, e cada encarregado só as obras sob a sua responsabilidade ativa. As duas empresas têm obras de nomes iguais para tornar o teste de isolamento mais evidente.
+
+Nesta entrega, o trabalhador e o cliente têm o seu ambiente de entrada. O registo de ponto e a consulta de faturas ainda não estão implementados. As regras da identidade e do banco estão em [docs/identidade-e-isolamento.md](docs/identidade-e-isolamento.md).
+
+## Testes no navegador
+
+Com a aplicação em execução e as dependências npm instaladas:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Validam os quatro perfis, seleção por teclado, persistência após reload, troca entre empresas, 404 por identificador de outra empresa e layout móvel. Os testes desta fase não emitem documentos nem apagam dados operacionais. Relatórios, screenshots e traces ficam em `frontend/playwright-report` e `frontend/test-results`, fora do Git. Para usar um Chromium já instalado, definir `PLAYWRIGHT_CHROMIUM_EXECUTABLE` com o caminho do executável.
+
+## Histórico para revisão
+
+```bash
+git log --reverse --oneline
+```
+
+O histórico local foi reorganizado em commits menores por responsabilidade após a revisão do tamanho das entregas. O histórico original está preservado na branch `backup/entrega-1-antes-da-divisao`. Esta divisão organiza alterações já existentes para revisão; os resultados dos testes correspondem à versão final. Nas próximas entregas, cada comportamento será concluído, validado e registado num commit pequeno antes de começar o seguinte. O estado e a validação estão em [docs/progresso.md](docs/progresso.md).
