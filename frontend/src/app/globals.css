@@ -410,3 +410,77 @@ h3 {
   color: #7b8292;
   font-size: 11px;
 }
+.site-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.site-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+}
+.site-icon {
+  font-size: 28px;
+  color: #798393;
+  display: block;
+  margin-bottom: 14px;
+}
+.site-card p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 7px 0 24px;
+}
+.site-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #508177;
+  font-size: 11px;
+}
+.site-label > span {
+  width: 6px;
+  height: 6px;
+}
+.empty-state {
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  padding: 55px 25px;
+}
+.empty-icon {
+  color: var(--teal);
+  font-size: 40px;
+  display: block;
+  margin-bottom: 17px;
+}
+.empty-state p,
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 10px;
+}
+.empty-state h2 {
+  font-size: 18px;
+}
+.dashboard-footer {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  font-size: 11px;
+  color: #9499a5;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
