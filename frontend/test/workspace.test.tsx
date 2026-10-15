@@ -96,3 +96,48 @@ it.each([
   expect(getMe).toHaveBeenCalledWith(id, expect.any(AbortSignal));
   if (id === 1 || id === 4) expect(getSites).not.toHaveBeenCalled();
 });
+it("recupera a seleção após recarregar", async () => {
+  localStorage.setItem("fonsat.userId", "3");
+  render(<Workspace />);
+  expect(
+    await screen.findByRole("heading", { name: "Visão geral", level: 1 }),
+  ).toBeInTheDocument();
+});
+it("limpa a seleção e os dados visíveis ao escolher outro utilizador", async () => {
+  localStorage.setItem("fonsat.userId", "3");
+  render(<Workspace />);
+  await screen.findByRole("heading", { name: "Visão geral", level: 1 });
+  await userEvent.click(
+    screen.getByRole("button", { name: "Escolher outro utilizador" }),
+  );
+  expect(
+    screen.getByRole("heading", { name: "Quem está a usar?" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Edifício Aurora" }),
+  ).not.toBeInTheDocument();
+  expect(localStorage.getItem("fonsat.userId")).toBeNull();
+});
+it("descarta um identificador guardado inválido", async () => {
+  localStorage.setItem("fonsat.userId", "admin");
+  render(<Workspace />);
+  expect(
+    await screen.findByRole("heading", { name: "Quem está a usar?" }),
+  ).toBeInTheDocument();
+  expect(getMe).not.toHaveBeenCalled();
+  expect(localStorage.getItem("fonsat.userId")).toBeNull();
+});
+it("pede nova seleção quando o servidor recusa o identificador", async () => {
+  localStorage.setItem("fonsat.userId", "99");
+  vi.mocked(getMe).mockRejectedValue(
+    new ApiError(401, "Utilizador desconhecido."),
+  );
+  render(<Workspace />);
+  expect(
+    await screen.findByRole("heading", { name: "Quem está a usar?" }),
+  ).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "A seleção já não é válida",
+  );
+  expect(localStorage.getItem("fonsat.userId")).toBeNull();
+});
