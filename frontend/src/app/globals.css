@@ -484,3 +484,123 @@ h3 {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+@media (max-width: 1050px) {
+  .people-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sidebar {
+    width: 215px;
+  }
+  .workspace-body {
+    width: calc(100% - 215px);
+  }
+  .topbar {
+    padding: 18px 24px;
+  }
+  .dashboard {
+    padding: 32px 24px 20px;
+  }
+  .breadcrumb {
+    display: none;
+  }
+  .topbar {
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 700px) {
+  .picker {
+    padding: 25px 18px;
+  }
+  .picker-top .demo-label {
+    font-size: 10px;
+  }
+  .picker-intro {
+    margin: 44px 0 30px;
+  }
+  .company-group {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+  .company-heading {
+    gap: 8px;
+  }
+  .company-heading h2 {
+    font-size: 15px;
+  }
+  .company-count {
+    font-size: 10px;
+  }
+  .person-card {
+    padding: 13px 10px;
+    gap: 8px;
+  }
+  .person-info > strong {
+    font-size: 12px;
+  }
+  .person-info > span {
+    font-size: 11px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 11px;
+  }
+  .person-arrow {
+    display: none;
+  }
+  .workspace {
+    display: block;
+  }
+  .sidebar {
+    width: 100%;
+    padding: 18px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar > .brand {
+    margin: 0;
+  }
+  .sidebar-company,
+  .sidebar nav,
+  .sidebar-bottom {
+    display: none;
+  }
+  .workspace-body {
+    width: 100%;
+  }
+  .topbar {
+    min-height: 66px;
+    padding: 13px 18px;
+  }
+  .switcher,
+  .switcher select {
+    width: 100%;
+    max-width: none;
+  }
+  .dashboard {
+    padding: 30px 18px 18px;
+  }
+  .welcome {
+    padding: 21px 18px;
+    align-items: flex-start;
+  }
+  .role-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+  }
+  .site-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-footer {
+    margin-top: 40px;
+    flex-wrap: wrap;
+  }
+  .picker-footer {
+    line-height: 1.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

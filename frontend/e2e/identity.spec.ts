@@ -94,3 +94,31 @@ test("troca de empresa e mantém as obras isoladas mesmo com nomes iguais", asyn
   });
   expect(response.status()).toBe(404);
 });
+test("o seletor e o ambiente funcionam num ecrã móvel sem scroll horizontal", async ({
+  page,
+}, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("button", { name: /João Silva/ })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("seletor-mobile.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: /Sofia Ramos/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Visão geral", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("ambiente-mobile.png"),
+    fullPage: true,
+  });
+});
