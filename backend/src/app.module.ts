@@ -1,3 +1,4 @@
+import { CatalogModule } from './catalog/catalog.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './database/prisma.module';
@@ -12,6 +13,7 @@ import { SitesModule } from './sites/sites.module';
     HealthModule,
     IdentityModule,
     SitesModule,
+    CatalogModule,
   ],
 })
 export class AppModule {}
