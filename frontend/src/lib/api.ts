@@ -27,11 +27,13 @@ export async function api<T>(
   path: string,
   userId?: number,
   signal?: AbortSignal,
+  init?: { method: string; body: string },
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
-      headers: userId ? { "X-User-Id": String(userId) } : {},
+      ...init,
+      headers: { ...(userId ? { "X-User-Id": String(userId) } : {}), ...(init ? { "Content-Type": "application/json" } : {}) },
       signal,
       cache: "no-store",
     });

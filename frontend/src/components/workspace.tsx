@@ -12,6 +12,8 @@ import {
   type Site,
 } from "../lib/api";
 
+import { Operations } from "./operations";
+
 const STORAGE_KEY = "fonsat.userId";
 export const ROLE_LABEL: Record<Role, string> = {
   worker: "Trabalhador",
@@ -429,6 +431,7 @@ function Dashboard({
               </p>
             </section>
           )}
+          {staff && <Operations key={me.id} me={me} />}
           <footer className="dashboard-footer">
             <span>FONSAT · Gestão de equipas</span>
             <button className="quiet" onClick={() => onSelect(null)}>
