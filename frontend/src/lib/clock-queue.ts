@@ -1,36 +1,114 @@
-import { api } from './api';
-export interface LocalEvent { id: string; shiftId: string; siteId: number; kind: 'in'|'out'; occurredAt: string; userId: number }
-export interface ActiveShift { shiftId: string; siteId: number; startAt: string }
-function database(): Promise<IDBDatabase> {
-  return new Promise((resolve,reject)=>{
-    const request=indexedDB.open('fonsat-clock-v1',1);
-    request.onupgradeneeded=()=>{ const db=request.result; const events=db.createObjectStore('events',{keyPath:'id'});events.createIndex('userId','userId');db.createObjectStore('sessions',{keyPath:'userId'}); };
-    request.onsuccess=()=>resolve(request.result); request.onerror=()=>reject(new Error('Não foi possível abrir a fila local. A marcação não foi registada.'));
+import { api } from "./api";
+import { deviceRead, deviceWrite } from "./device-db";
+import { invalidateWorkerContext } from "./offline-context";
+import {
+  createSynchronizer,
+  scopeKey,
+  type QueueScope,
+  type QueueEvent,
+} from "./queue-sync";
+export type LocalEvent = QueueEvent;
+export interface ActiveShift {
+  shiftId: string;
+  siteId: number;
+  startAt: string;
+}
+export const queuedEvents = (scope: QueueScope) =>
+  deviceRead<LocalEvent[]>("events", (store) =>
+    store.index("scope").getAll(scopeKey(scope)),
+  );
+export const readShift = (scope: QueueScope) =>
+  deviceRead<{ active: ActiveShift | null } | undefined>(
+    "scopedSessions",
+    (store) => store.get(scopeKey(scope)),
+  );
+export const saveShift = (scope: QueueScope, active: ActiveShift | null) =>
+  deviceWrite(["scopedSessions"], (tx) => {
+    tx.objectStore("scopedSessions").put({
+      key: scopeKey(scope),
+      ...scope,
+      active,
+    });
+  });
+export function enqueue(event: LocalEvent, active: ActiveShift | null) {
+  return deviceWrite(["events", "scopedSessions"], (tx) => {
+    tx.objectStore("events").add({ ...event, scope: scopeKey(event) });
+    tx.objectStore("scopedSessions").put({
+      key: scopeKey(event),
+      companyId: event.companyId,
+      userId: event.userId,
+      active,
+    });
   });
 }
-async function transaction<T>(stores: string[], mode: IDBTransactionMode, work: (tx: IDBTransaction)=>IDBRequest<T>):Promise<T> {
-  const db=await database();
-  return new Promise((resolve,reject)=>{const tx=db.transaction(stores,mode);const request=work(tx);let result:T;request.onsuccess=()=>{result=request.result;};tx.oncomplete=()=>{db.close();resolve(result);};tx.onerror=tx.onabort=()=>{db.close();reject(new Error('Falha no armazenamento local. Tente novamente.'));};});
+export function enqueuePeriod(events: [LocalEvent, LocalEvent]) {
+  return deviceWrite(["events"], (tx) => {
+    for (const event of events)
+      tx.objectStore("events").add({ ...event, scope: scopeKey(event) });
+  });
 }
-export const queuedEvents=(userId:number)=>transaction<LocalEvent[]>(['events'],'readonly',tx=>tx.objectStore('events').index('userId').getAll(userId));
-export const readShift=(userId:number)=>transaction<{userId:number;active:ActiveShift|null}|undefined>(['sessions'],'readonly',tx=>tx.objectStore('sessions').get(userId));
-export const saveShift=(userId:number,active:ActiveShift|null)=>transaction(['sessions'],'readwrite',tx=>tx.objectStore('sessions').put({userId,active}));
-export async function enqueue(event:LocalEvent,active:ActiveShift|null) {
-  await transaction(['events','sessions'],'readwrite',tx=>{tx.objectStore('sessions').put({userId:event.userId,active});return tx.objectStore('events').add(event);});
-}
-const flushing=new Map<number,Promise<{pending:number;message:string}>>();
-export function flushQueue(userId:number, signal?:AbortSignal) {
-  const running=flushing.get(userId); if(running)return running;
-  const run=(async()=>{
-    const all=await queuedEvents(userId); let message='';
-    for(let offset=0;offset<all.length;offset+=100){
-      const batch=all.slice(offset,offset+100);
-      const response=await api<{results:{id:string;accepted:boolean;message?:string}[]}>('/attendance/sync',userId,signal,{method:'POST',body:JSON.stringify({events:batch.map(({userId:_,...e})=>e)})});
-      const accepted=response.results.filter(r=>r.accepted && batch.some(e=>e.id===r.id)).map(r=>r.id);
-      if(accepted.length)await transaction(['events'],'readwrite',tx=>{for(const id of accepted.slice(0,-1))tx.objectStore('events').delete(id);return tx.objectStore('events').delete(accepted[accepted.length-1]);});
-      message=response.results.filter(r=>!r.accepted).map(r=>r.message).join(' ');
-    }
-    return {pending:(await queuedEvents(userId)).length,message};
-  })().finally(()=>flushing.delete(userId));
-  flushing.set(userId,run);return run;
+export const flushQueue = createSynchronizer(
+  {
+    list: queuedEvents,
+    invalidate: invalidateWorkerContext,
+    acknowledge: (scope, ids) =>
+      deviceWrite(["events"], (tx) => {
+        const store = tx.objectStore("events");
+        for (const id of ids) {
+          const request = store.get(id);
+          request.onsuccess = () => {
+            const event = request.result as LocalEvent | undefined;
+            if (
+              event?.userId === scope.userId &&
+              event.companyId === scope.companyId
+            )
+              store.delete(id);
+          };
+        }
+      }),
+  },
+  (scope, events) =>
+    api("/attendance/sync", scope.userId, undefined, {
+      method: "POST",
+      body: JSON.stringify({
+        events: events.map((event) => ({
+          id: event.id,
+          shiftId: event.shiftId,
+          siteId: event.siteId,
+          kind: event.kind,
+          occurredAt: event.occurredAt,
+        })),
+      }),
+    }),
+);
+
+/** Adopt v1 rows only after online verification of the worker and company sites. */
+export async function adoptLegacyQueue(scope: QueueScope, siteIds: number[]) {
+  await deviceWrite(["events", "sessions", "scopedSessions"], (tx) => {
+    const events = tx.objectStore("events"),
+      legacy = events.index("userId").getAll(scope.userId);
+    legacy.onsuccess = () => {
+      for (const event of legacy.result)
+        if (event.companyId === undefined && siteIds.includes(event.siteId))
+          events.put({ ...event, ...scope, scope: scopeKey(scope) });
+    };
+    const scoped = tx.objectStore("scopedSessions"),
+      existing = scoped.get(scopeKey(scope));
+    existing.onsuccess = () => {
+      if (existing.result) return;
+      const previous = tx.objectStore("sessions").get(scope.userId);
+      previous.onsuccess = () => {
+        const session = previous.result;
+        if (
+          session &&
+          (!session.active || siteIds.includes(session.active.siteId))
+        )
+          scoped.put({
+            key: scopeKey(scope),
+            ...scope,
+            active: session.active,
+          });
+      };
+    };
+  });
 }

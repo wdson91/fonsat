@@ -3,6 +3,19 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { Workspace } from "../src/components/workspace";
 import {
+  cachedDemoUsers,
+  workerContext,
+  invalidateUserContexts,
+} from "../src/lib/offline-context";
+vi.mock("../src/lib/offline-context", () => ({
+  cachedDemoUsers: vi.fn(async () => []),
+  workerContext: vi.fn(async () => null),
+  saveDemoUsers: vi.fn(async () => {}),
+  saveWorkerContext: vi.fn(async () => {}),
+  invalidateUserContexts: vi.fn(async () => {}),
+  invalidateWorkerContext: vi.fn(async () => {}),
+}));
+import {
   ApiError,
   getMe,
   getSites,
@@ -59,12 +72,56 @@ const current = (id: number): CurrentUser => ({
   brand_color: "#ec405c",
   time_zone: "Europe/Lisbon",
 });
+it("reabre offline apenas o último trabalhador com contexto previamente validado", async () => {
+  localStorage.setItem("fonsat.userId", "1");
+  vi.mocked(getMe).mockRejectedValue(new ApiError(0, "Sem rede"));
+  vi.mocked(workerContext).mockResolvedValue({
+    key: "1:1",
+    userId: 1,
+    companyId: 1,
+    valid: true,
+    me: current(1),
+    bootstrap: {
+      worker: { id: 1, name: "João" },
+      sites: [],
+      suggestedSiteId: null,
+    },
+    entries: [],
+    savedAt: new Date().toISOString(),
+  });
+  render(<Workspace />);
+  expect(
+    await screen.findByRole("heading", { name: "O meu dia", level: 1 }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/A usar os dados guardados/)).toBeInTheDocument();
+});
+it("recusa offline uma seleção não preparada e conserva o seletor", async () => {
+  localStorage.setItem("fonsat.userId", "1");
+  vi.mocked(getMe).mockRejectedValue(new ApiError(0, "Sem rede"));
+  render(<Workspace />);
+  expect(
+    await screen.findByRole("heading", { name: "Quem está a usar?" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent("marcações");
+});
+it("401 invalida o contexto guardado e não o usa como alternativa offline", async () => {
+  localStorage.setItem("fonsat.userId", "1");
+  vi.mocked(getMe).mockRejectedValue(new ApiError(401, "Identidade recusada"));
+  render(<Workspace />);
+  expect(
+    await screen.findByRole("heading", { name: "Quem está a usar?" }),
+  ).toBeInTheDocument();
+  expect(invalidateUserContexts).toHaveBeenCalledWith(1);
+  expect(workerContext).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   localStorage.clear();
   vi.resetAllMocks();
   vi.mocked(listDemoUsers).mockResolvedValue(users);
   vi.mocked(getMe).mockImplementation(async (id) => current(id));
   vi.mocked(getSites).mockResolvedValue([{ id: 1, name: "Edifício Aurora" }]);
+  vi.mocked(cachedDemoUsers).mockResolvedValue([]);
+  vi.mocked(workerContext).mockResolvedValue(null);
 });
 it("agrupa os utilizadores por empresa e apresenta nome e perfil", async () => {
   render(<Workspace />);

@@ -4,6 +4,20 @@ const config: NextConfig = {
   output: "standalone",
   experimental: { cpus: 2 },
   outputFileTracingRoot: path.join(process.cwd(), ".."),
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

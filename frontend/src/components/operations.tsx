@@ -1,8 +1,8 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { Billing } from './billing';
-import { Team } from './team';
-import { api, type CurrentUser } from '../lib/api';
+"use client";
+import { useEffect, useState } from "react";
+import { Billing } from "./billing";
+import { Team } from "./team";
+import { api, type CurrentUser } from "../lib/api";
 import {
   addDays,
   command,
@@ -11,49 +11,62 @@ import {
   type Allocation,
   type Catalog,
   type Named,
-} from '../lib/operations';
+} from "../lib/operations";
 
-export function Operations({ me }: { me: CurrentUser }) {
-  const [tab, setTab] = useState('');
+export function Operations({
+  me,
+  selectedTab,
+  onTabChange,
+}: {
+  me: CurrentUser;
+  selectedTab?: string;
+  onTabChange?: (tab: string) => void;
+}) {
+  const [localTab, setLocalTab] = useState("");
+  const tab = selectedTab ?? localTab;
+  const setTab = (value: string) => {
+    setLocalTab(value);
+    onTabChange?.(value);
+  };
   return (
-    <section className="operations" aria-label="Operação">
+    <section className="operations" id="operations" aria-label="Operação">
       <nav className="operation-tabs" aria-label="Áreas de trabalho">
         <button
-          onClick={() => setTab('planning')}
-          aria-pressed={tab === 'planning'}
+          onClick={() => setTab("planning")}
+          aria-pressed={tab === "planning"}
         >
           Distribuição
         </button>
-        <button onClick={() => setTab('team')} aria-pressed={tab === 'team'}>
+        <button onClick={() => setTab("team")} aria-pressed={tab === "team"}>
           Equipa e pendências
         </button>
-        {me.role === 'admin' && (
+        {me.role === "admin" && (
           <button
-            onClick={() => setTab('billing')}
-            aria-pressed={tab === 'billing'}
+            onClick={() => setTab("billing")}
+            aria-pressed={tab === "billing"}
           >
             Preços e rascunhos
           </button>
         )}
-        {me.role === 'admin' && (
+        {me.role === "admin" && (
           <button
-            onClick={() => setTab('catalog')}
-            aria-pressed={tab === 'catalog'}
+            onClick={() => setTab("catalog")}
+            aria-pressed={tab === "catalog"}
           >
             Cadastros
           </button>
         )}
       </nav>
-      {tab === 'billing' ? (
+      {tab === "billing" ? (
         <Billing key={me.id + tab} me={me} />
-      ) : tab === 'team' ? (
+      ) : tab === "team" ? (
         <Team key={me.id + tab} me={me} />
       ) : (
         tab && (
           <CatalogArea
             key={me.id + tab}
             me={me}
-            planning={tab === 'planning'}
+            planning={tab === "planning"}
           />
         )
       )}
@@ -62,7 +75,7 @@ export function Operations({ me }: { me: CurrentUser }) {
 }
 export function Choices({
   items,
-  empty = 'Selecionar…',
+  empty = "Selecionar…",
 }: {
   items: Named[] | { id: number; name: string }[];
   empty?: string;
@@ -80,11 +93,11 @@ export function Choices({
 }
 function CatalogArea({ me, planning }: { me: CurrentUser; planning: boolean }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [revision, refresh] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    api<Catalog>('/catalog', me.id, controller.signal)
+    api<Catalog>("/catalog", me.id, controller.signal)
       .then(setCatalog)
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -95,7 +108,7 @@ function CatalogArea({ me, planning }: { me: CurrentUser; planning: boolean }) {
     <>
       {error && <p role="alert">{error}</p>}
       {!catalog ? (
-        <p>A carregar cadastros…</p>
+        error ? <button onClick={() => { setError(''); refresh((n) => n + 1); }}>Tentar carregar cadastros</button> : <p>A carregar cadastros…</p>
       ) : planning ? (
         <Planning me={me} catalog={catalog} />
       ) : (
@@ -117,22 +130,22 @@ function CatalogEditor({
   catalog: Catalog;
   refresh: () => void;
 }) {
-  const [kind, setKind] = useState<'workers' | 'trades' | 'clients' | 'sites'>(
-    'workers',
+  const [kind, setKind] = useState<"workers" | "trades" | "clients" | "sites">(
+    "workers",
   );
   const [editing, setEditing] = useState<number | null>(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const item = catalog[kind].find((i) => i.id === editing);
   async function save(form: HTMLFormElement) {
     setBusy(true);
-    setMessage('');
+    setMessage("");
     const data = Object.fromEntries(new FormData(form));
     const payload = {
       ...data,
-      active: data.active === 'on',
+      active: data.active === "on",
       ...Object.fromEntries(
-        ['tradeId', 'clientId', 'userId']
+        ["tradeId", "clientId", "userId"]
           .filter((k) => data[k])
           .map((k) => [k, Number(data[k])]),
       ),
@@ -140,14 +153,14 @@ function CatalogEditor({
     try {
       await command(
         me.id,
-        '/catalog/' + kind + (editing ? '/' + editing : ''),
-        editing ? 'PATCH' : 'POST',
+        "/catalog/" + kind + (editing ? "/" + editing : ""),
+        editing ? "PATCH" : "POST",
         payload,
       );
       setEditing(null);
       form.reset();
       refresh();
-      setMessage('Cadastro guardado.');
+      setMessage("Cadastro guardado.");
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
@@ -194,10 +207,10 @@ function CatalogEditor({
             type="checkbox"
             name="active"
             defaultChecked={item?.active ?? true}
-          />{' '}
+          />{" "}
           Ativo
         </label>
-        {kind === 'workers' && (
+        {kind === "workers" && (
           <>
             <label>
               Ofício habitual
@@ -205,7 +218,7 @@ function CatalogEditor({
                 name="tradeId"
                 required
                 defaultValue={
-                  item && 'tradeId' in item ? String(item.tradeId) : ''
+                  item && "tradeId" in item ? String(item.tradeId) : ""
                 }
               >
                 <Choices items={catalog.trades.filter((t) => t.active)} />
@@ -216,24 +229,24 @@ function CatalogEditor({
               <select
                 name="userId"
                 defaultValue={
-                  item && 'userId' in item ? String(item.userId ?? '') : ''
+                  item && "userId" in item ? String(item.userId ?? "") : ""
                 }
               >
                 <Choices
-                  items={catalog.users.filter((u) => u.role === 'worker')}
+                  items={catalog.users.filter((u) => u.role === "worker")}
                   empty="Sem utilizador"
                 />
               </select>
             </label>
           </>
         )}
-        {kind === 'clients' && (
+        {kind === "clients" && (
           <>
             <label>
               NIF
               <input
                 name="taxId"
-                defaultValue={item && 'taxId' in item ? String(item.taxId) : ''}
+                defaultValue={item && "taxId" in item ? String(item.taxId) : ""}
               />
             </label>
             <label>
@@ -241,18 +254,18 @@ function CatalogEditor({
               <select
                 name="userId"
                 defaultValue={
-                  item && 'userId' in item ? String(item.userId ?? '') : ''
+                  item && "userId" in item ? String(item.userId ?? "") : ""
                 }
               >
                 <Choices
-                  items={catalog.users.filter((u) => u.role === 'client')}
+                  items={catalog.users.filter((u) => u.role === "client")}
                   empty="Sem utilizador"
                 />
               </select>
             </label>
           </>
         )}
-        {kind === 'sites' && (
+        {kind === "sites" && (
           <>
             <label>
               Cliente
@@ -260,7 +273,7 @@ function CatalogEditor({
                 name="clientId"
                 required
                 defaultValue={
-                  item && 'clientId' in item ? String(item.clientId ?? '') : ''
+                  item && "clientId" in item ? String(item.clientId ?? "") : ""
                 }
               >
                 <Choices items={catalog.clients.filter((c) => c.active)} />
@@ -271,14 +284,14 @@ function CatalogEditor({
               <input
                 name="location"
                 defaultValue={
-                  item && 'location' in item ? String(item.location) : ''
+                  item && "location" in item ? String(item.location) : ""
                 }
               />
             </label>
           </>
         )}
         <button className="primary" disabled={busy}>
-          {editing ? 'Guardar alterações' : 'Criar'}
+          {editing ? "Guardar alterações" : "Criar"}
         </button>
         {editing && (
           <button type="button" onClick={() => setEditing(null)}>
@@ -291,7 +304,7 @@ function CatalogEditor({
         {catalog[kind].map((i) => (
           <li key={i.id}>
             <span>
-              {i.name} · {i.active ? 'Ativo' : 'Inativo'}
+              {i.name} · {i.active ? "Ativo" : "Inativo"}
             </span>
             <button onClick={() => setEditing(i.id)}>Editar {i.name}</button>
           </li>
@@ -306,13 +319,13 @@ function CatalogEditor({
           const data = Object.fromEntries(new FormData(f));
           setBusy(true);
           try {
-            await command(me.id, '/catalog/responsibilities', 'POST', {
+            await command(me.id, "/catalog/responsibilities", "POST", {
               ...data,
               siteId: Number(data.siteId),
               userId: Number(data.userId),
             });
             refresh();
-            setMessage('Responsabilidade guardada.');
+            setMessage("Responsabilidade guardada.");
           } catch (error) {
             setMessage((error as Error).message);
           } finally {
@@ -330,7 +343,7 @@ function CatalogEditor({
           Encarregado
           <select name="userId" required>
             <Choices
-              items={catalog.users.filter((u) => u.role === 'foreman')}
+              items={catalog.users.filter((u) => u.role === "foreman")}
             />
           </select>
         </label>
@@ -347,9 +360,9 @@ function CatalogEditor({
       <ul>
         {catalog.responsibilities.map((r) => (
           <li key={r.id}>
-            {catalog.sites.find((s) => s.id === r.siteId)?.name} ·{' '}
-            {catalog.users.find((u) => u.id === r.userId)?.name} ·{' '}
-            {r.startsOn.slice(0, 10)} até {r.endsOn?.slice(0, 10) ?? 'sem fim'}
+            {catalog.sites.find((s) => s.id === r.siteId)?.name} ·{" "}
+            {catalog.users.find((u) => u.id === r.userId)?.name} ·{" "}
+            {r.startsOn.slice(0, 10)} até {r.endsOn?.slice(0, 10) ?? "sem fim"}
           </li>
         ))}
       </ul>
@@ -360,7 +373,7 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
   const today = companyDay(me.time_zone);
   const [week, setWeek] = useState(monday(today)),
     [cells, setCells] = useState<Allocation[]>([]),
-    [message, setMessage] = useState(''),
+    [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [revision, refresh] = useState(0);
   const [edit, setEdit] = useState<{
@@ -372,7 +385,7 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
   } | null>(null);
   useEffect(() => {
     const c = new AbortController();
-    api<Allocation[]>('/planning?week=' + week, me.id, c.signal)
+    api<Allocation[]>("/planning?week=" + week, me.id, c.signal)
       .then(setCells)
       .catch((e) => {
         if (!c.signal.aborted) setMessage(e.message);
@@ -399,9 +412,9 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
               const r = await command<{
                 copied: number;
                 skipped: { reason: string }[];
-              }>(me.id, '/planning/copy', 'POST', { week });
+              }>(me.id, "/planning/copy", "POST", { week });
               setMessage(
-                `${r.copied} células copiadas. ${r.skipped.map((s) => s.reason).join(' ')}`,
+                `${r.copied} células copiadas. ${r.skipped.map((s) => s.reason).join(" ")}`,
               );
               refresh((n) => n + 1);
             } catch (e) {
@@ -451,7 +464,7 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
                           {cell
                             ? catalog.sites.find((s) => s.id === cell.siteId)
                                 ?.name
-                            : 'Livre'}
+                            : "Livre"}
                           {cell?.tradeId && (
                             <small>
                               {
@@ -479,7 +492,7 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
             setBusy(true);
             const data = Object.fromEntries(new FormData(e.currentTarget));
             try {
-              await command(me.id, '/planning', 'PUT', {
+              await command(me.id, "/planning", "PUT", {
                 workerId: edit.workerId,
                 day: edit.day,
                 siteId: Number(data.siteId),
@@ -487,7 +500,7 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
               });
               setEdit(null);
               refresh((n) => n + 1);
-              setMessage('Distribuição guardada.');
+              setMessage("Distribuição guardada.");
             } catch (error) {
               setMessage((error as Error).message);
             } finally {
@@ -496,18 +509,18 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
           }}
         >
           <p>
-            {catalog.workers.find((w) => w.id === edit.workerId)?.name} ·{' '}
+            {catalog.workers.find((w) => w.id === edit.workerId)?.name} ·{" "}
             {edit.day}
           </p>
           <label>
             Obra
-            <select name="siteId" required defaultValue={edit.siteId ?? ''}>
+            <select name="siteId" required defaultValue={edit.siteId ?? ""}>
               <Choices items={catalog.sites.filter((s) => s.active)} />
             </select>
           </label>
           <label>
             Ofício
-            <select name="tradeId" defaultValue={edit.tradeId ?? ''}>
+            <select name="tradeId" defaultValue={edit.tradeId ?? ""}>
               <Choices
                 items={catalog.trades.filter((t) => t.active)}
                 empty="Ofício habitual"
@@ -522,10 +535,10 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await command(me.id, '/planning/' + edit.id, 'DELETE', {});
+                  await command(me.id, "/planning/" + edit.id, "DELETE", {});
                   setEdit(null);
                   refresh((n) => n + 1);
-                  setMessage('Trabalhador libertado neste dia.');
+                  setMessage("Trabalhador libertado neste dia.");
                 } catch (e) {
                   setMessage((e as Error).message);
                 } finally {

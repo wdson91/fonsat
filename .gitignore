@@ -12,3 +12,4 @@ playwright-report/
 # Projeto anterior mantido apenas como referência local.
 /fonsat/
 backend/src/generated/
+frontend/public/sw.js

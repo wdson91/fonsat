@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import {
   ApiError,
   getMe,
@@ -15,6 +15,13 @@ import {
 import { WorkerClock } from "./worker-clock";
 import { Operations } from "./operations";
 import { InvoicesPanel } from "./invoices";
+import {
+  cachedDemoUsers,
+  invalidateUserContexts,
+  saveDemoUsers,
+  workerContext,
+} from "../lib/offline-context";
+import { prepareOfflineShell } from "../lib/offline-shell";
 
 const STORAGE_KEY = "fonsat.userId";
 export const ROLE_LABEL: Record<Role, string> = {
@@ -88,6 +95,33 @@ export function Workspace() {
     sites: Site[];
   } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [needsPicker, setNeedsPicker] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [shellReady, setShellReady] = useState(false);
+  const [selectionRevision, setSelectionRevision] = useState(0);
+
+  useEffect(() => {
+    const online = () => setOffline(false),
+      offline = () => setOffline(true);
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
+    return () => {
+      window.removeEventListener("online", online);
+      window.removeEventListener("offline", offline);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void prepareOfflineShell()
+      .then((ready) => {
+        if (active) setShellReady(ready);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -104,20 +138,43 @@ export function Workspace() {
   const select = useCallback((id: number | null) => {
     setContext(null);
     setError(null);
+    setNeedsPicker(false);
+    setOffline(false);
     remember(id);
     setSelected(id);
+    setSelectionRevision((value) => value + 1);
+  }, []);
+  const identityRejected = useCallback(() => {
+    select(null);
+    setError(
+      "A seleção foi recusada. Escolha novamente quem está a usar. As marcações pendentes continuam guardadas.",
+    );
+  }, [select]);
+  const connected = useCallback(() => {
+    if (navigator.onLine) setOffline(false);
   }, []);
 
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     setListError(null);
+    void cachedDemoUsers()
+      .then((cached) => {
+        if (active && cached.length)
+          setUsers((previous) => (previous.length ? previous : cached));
+      })
+      .catch(() => {});
     listDemoUsers(controller.signal)
       .then((data) => {
-        if (active) setUsers(data);
+        if (active) {
+          setUsers(data);
+          void saveDemoUsers(data).catch(() => {});
+        }
       })
-      .catch((error) => {
-        if (active)
+      .catch(async (error) => {
+        const cached = await cachedDemoUsers().catch(() => []);
+        if (active && cached.length) setUsers(cached);
+        else if (active)
           setListError(
             error instanceof Error
               ? error.message
@@ -135,6 +192,7 @@ export function Workspace() {
     let active = true;
     const controller = new AbortController();
     setError(null);
+    setNeedsPicker(false);
     async function load() {
       try {
         const me = await getMe(selected!, controller.signal);
@@ -143,14 +201,31 @@ export function Workspace() {
           me.role === "admin" || me.role === "foreman"
             ? await getSites(selected!, controller.signal)
             : [];
-        if (active) setContext({ me, sites });
+        if (active) {
+          setContext({ me, sites });
+          setOffline(false);
+        }
       } catch (failure) {
         if (!active) return;
         if (failure instanceof ApiError && failure.status === 401) {
+          await invalidateUserContexts(selected!).catch(() => {});
+          if (!active) return;
           select(null);
           setError(
             "A seleção já não é válida. Escolha novamente quem está a usar.",
           );
+        } else if (failure instanceof ApiError && failure.status === 0) {
+          const cached = await workerContext(selected!).catch(() => null);
+          if (!active) return;
+          if (cached) {
+            setContext({ me: cached.me, sites: [] });
+            setOffline(true);
+          } else {
+            setNeedsPicker(true);
+            setError(
+              `${failure.message} As marcações pendentes continuam guardadas. Escolha um trabalhador preparado neste dispositivo ou volte a tentar com ligação.`,
+            );
+          }
         } else
           setError(
             failure instanceof Error
@@ -164,7 +239,7 @@ export function Workspace() {
       active = false;
       controller.abort();
     };
-  }, [ready, selected, attempt, select]);
+  }, [ready, selected, attempt, selectionRevision, select]);
 
   const retry = () => setAttempt((value) => value + 1);
   if (!ready)
@@ -173,7 +248,7 @@ export function Workspace() {
         A preparar o seu ambiente…
       </main>
     );
-  if (selected === null)
+  if (selected === null || needsPicker)
     return (
       <Picker
         users={users}
@@ -212,6 +287,10 @@ export function Workspace() {
       sites={context.sites}
       users={users}
       onSelect={select}
+      offline={offline}
+      shellReady={shellReady}
+      onIdentityRejected={identityRejected}
+      onConnected={connected}
     />
   );
 }
@@ -304,16 +383,36 @@ function Dashboard({
   sites,
   users,
   onSelect,
+  offline,
+  shellReady,
+  onIdentityRejected,
+  onConnected,
 }: {
   me: CurrentUser;
   sites: Site[];
   users: DemoUser[];
   onSelect: (id: number | null) => void;
+  offline: boolean;
+  shellReady: boolean;
+  onIdentityRejected: () => void;
+  onConnected: () => void;
 }) {
   const home = HOME[me.role];
   const staff = me.role === "admin" || me.role === "foreman";
+  const [area, setArea] = useState("home");
+  const titles: Record<string, string> = {
+    planning: "Distribuição",
+    team: "Equipa e pendências",
+    billing: "Preços e rascunhos",
+    catalog: "Cadastros",
+    invoices: "Faturação",
+  };
+  const title = titles[area] ?? home.title;
   return (
-    <div className="workspace">
+    <div
+      className={`workspace workspace--${me.role}`}
+      style={{ "--accent": me.brand_color } as CSSProperties}
+    >
       <aside className="sidebar">
         <Mark />
         <div className="sidebar-company">
@@ -323,10 +422,59 @@ function Dashboard({
           <strong>{me.company_name}</strong>
         </div>
         <nav aria-label="Principal">
-          <a className="nav-active" href="/" aria-current="page">
+          <a
+            className={area === "home" ? "nav-active" : ""}
+            href="#workspace-main"
+            aria-current={area === "home" ? "page" : undefined}
+            onClick={() => setArea("home")}
+          >
             <span aria-hidden="true">◫</span>
             {home.title}
           </a>
+          {staff && (
+            <>
+              <a
+                href="#operations"
+                className={area === "planning" ? "nav-active" : ""}
+                onClick={() => setArea("planning")}
+              >
+                Distribuição
+              </a>
+              <a
+                href="#operations"
+                className={area === "team" ? "nav-active" : ""}
+                onClick={() => setArea("team")}
+              >
+                Equipa e pendências
+              </a>
+            </>
+          )}
+          {me.role === "admin" && (
+            <>
+              <a
+                href="#operations"
+                className={area === "billing" ? "nav-active" : ""}
+                onClick={() => setArea("billing")}
+              >
+                Preços e rascunhos
+              </a>
+              <a
+                href="#operations"
+                className={area === "catalog" ? "nav-active" : ""}
+                onClick={() => setArea("catalog")}
+              >
+                Cadastros
+              </a>
+              <a
+                href="#workspace-main"
+                className={area === "invoices" ? "nav-active" : ""}
+                onClick={() => setArea("invoices")}
+              >
+                Faturação
+              </a>
+            </>
+          )}
+          {me.role === "worker" && <a href="#time-grid">As minhas horas</a>}
         </nav>
         <div className="sidebar-bottom">
           <span className="demo-label">
@@ -341,7 +489,7 @@ function Dashboard({
           <p className="breadcrumb">
             {me.company_name}
             <span>/</span>
-            {home.title}
+            {title}
           </p>
           <label className="switcher">
             <span className="sr-only">Trocar de utilizador</span>
@@ -364,11 +512,11 @@ function Dashboard({
             </select>
           </label>
         </header>
-        <main className="dashboard">
+        <main className="dashboard" id="workspace-main">
           <div className="dashboard-heading">
             <div>
               <p className="eyebrow">{ROLE_LABEL[me.role]}</p>
-              <h1>{home.title}</h1>
+              <h1>{title}</h1>
               <p>{home.subtitle}</p>
             </div>
             <span className={`avatar avatar--${me.role}`} aria-hidden="true">
@@ -384,7 +532,13 @@ function Dashboard({
             </div>
             <span className="role-badge">{ROLE_LABEL[me.role]}</span>
           </section>
-          {staff ? (
+          {offline && (
+            <p className="offline-banner" role="status">
+              A usar os dados guardados neste dispositivo. As marcações serão
+              sincronizadas quando recuperar a ligação.
+            </p>
+          )}
+          {staff && area === "home" ? (
             <section className="site-section" aria-labelledby="sites-title">
               <div className="section-heading">
                 <h2 id="sites-title">
@@ -417,10 +571,30 @@ function Dashboard({
               )}
             </section>
           ) : me.role === "worker" ? (
-            <WorkerClock key={me.id} me={me} />
+            <WorkerClock
+              key={me.id}
+              me={me}
+              shellReady={shellReady}
+              onIdentityRejected={onIdentityRejected}
+              onConnected={onConnected}
+            />
           ) : null}
-          {staff && <Operations key={me.id} me={me} />}
-          {(me.role === "admin" || me.role === "client") && <InvoicesPanel key={`invoices-${me.id}`} userId={me.id} role={me.role} />}
+          {staff && area !== "invoices" && (
+            <Operations
+              key={me.id}
+              me={me}
+              selectedTab={area === "home" ? "" : area}
+              onTabChange={setArea}
+            />
+          )}
+          {(me.role === "client" ||
+            (me.role === "admin" && ["home", "invoices"].includes(area))) && (
+            <InvoicesPanel
+              key={`invoices-${me.id}`}
+              userId={me.id}
+              role={me.role}
+            />
+          )}
           <footer className="dashboard-footer">
             <span>FONSAT · Gestão de equipas</span>
             <button className="quiet" onClick={() => onSelect(null)}>

@@ -292,6 +292,7 @@ h3 {
   overflow-wrap: anywhere;
 }
 .sidebar nav a {
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 11px;
@@ -305,6 +306,7 @@ h3 {
   background: #f8e6eb;
   color: #bc344c;
 }
+.sidebar nav a.nav-active { color: #bc344c; }
 .nav-active > span {
   font-size: 20px;
 }
