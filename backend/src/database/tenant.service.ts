@@ -10,6 +10,6 @@ export class TenantService {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT set_config('app.company_id', ${String(companyId)}, true)`;
       return operation(tx);
-    }, { maxWait: 5000, timeout: 10000 });
+    }, { maxWait: 5000, timeout: 10000, isolationLevel: 'Serializable' });
   }
 }

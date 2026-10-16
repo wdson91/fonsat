@@ -1,0 +1,96 @@
+import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { TenantService } from '../database/tenant.service';
+import { ScopeService } from '../common/scope.service';
+import { date, dayInZone, instant, integer, uuid } from '../common/validation';
+import type { CurrentUser } from '../identity/identity';
+export interface ClockInput { id: unknown; shiftId: unknown; siteId: unknown; kind: unknown; occurredAt: unknown }
+@Injectable()
+export class AttendanceService {
+  constructor(private readonly tenant: TenantService, private readonly scope: ScopeService) {}
+  bootstrap(user: CurrentUser) {
+    return this.tenant.inCompany(user.company_id, async tx => {
+      const worker = await tx.worker.findUnique({ where: { userId: user.id } });
+      if (!worker) throw new NotFoundException('Utilizador sem trabalhador associado.');
+      const today = date(dayInZone(new Date(), user.time_zone));
+      const allocation = await tx.allocation.findUnique({ where: { companyId_workerId_day: { companyId: user.company_id, workerId: worker.id, day: today } } });
+      return { worker, sites: await tx.site.findMany({ select: { id: true, name: true, active: true } }), suggestedSiteId: allocation?.siteId ?? null };
+    });
+  }
+  async sync(user: CurrentUser, batch: unknown) {
+    if (!Array.isArray(batch) || batch.length > 100) throw new BadRequestException('Envie até 100 marcações.');
+    const results = [];
+    for (const input of batch) {
+      try { results.push({ id: input?.id, accepted: true, ...await this.record(user, input) }); }
+      catch (error) {
+        const code = (error as { code?: string }).code;
+        const status = error instanceof HttpException ? error.getStatus() : ['P2002','P2034'].includes(code ?? '') ? 409 : code === 'P2003' ? 400 : 500;
+        results.push({ id: input?.id, accepted: false, status, message: error instanceof HttpException ? error.message : status === 409 ? 'Conflito de sincronização. Reenvie a marcação.' : status === 400 ? 'Referência inválida.' : 'Falha ao guardar a marcação.' });
+      }
+    }
+    return { results };
+  }
+  private record(user: CurrentUser, input: ClockInput) {
+    if (!input || typeof input !== 'object') throw new BadRequestException('Marcação inválida.');
+    const id = uuid(input.id), entryId = uuid(input.shiftId), siteId = integer(input.siteId), occurredAt = instant(input.occurredAt);
+    if (input.kind !== 'in' && input.kind !== 'out') throw new BadRequestException('Tipo de marcação inválido.');
+    const kind = input.kind;
+    return this.tenant.inCompany(user.company_id, async tx => {
+      const worker = await tx.worker.findUnique({ where: { userId: user.id } });
+      if (!worker) throw new NotFoundException('Trabalhador não encontrado.');
+      const existing = await tx.clockEvent.findUnique({ where: { id }, include: { entry: true } });
+      if (existing) {
+        if (existing.entry.workerId !== worker.id || existing.entryId !== entryId || existing.siteId !== siteId || existing.kind !== kind || +existing.occurredAt !== +occurredAt) throw new ConflictException('O UUID já existe com outro conteúdo.');
+        return { duplicate: true };
+      }
+      if (!await tx.site.findUnique({ where: { id: siteId } })) throw new BadRequestException('Obra não pertence à empresa.');
+      let entry = await tx.workEntry.findUnique({ where: { id: entryId } });
+      if (entry && entry.workerId !== worker.id) throw new BadRequestException('Turno de outro trabalhador.');
+      if (!entry) entry = await tx.workEntry.create({ data: { id: entryId, companyId: user.company_id, workerId: worker.id } });
+      await tx.clockEvent.create({ data: { id, entryId, companyId: user.company_id, siteId, kind, occurredAt } });
+      const current = await tx.entryVersion.findUnique({ where: { companyId_entryId_number: { companyId: user.company_id, entryId, number: entry.currentVersion } } });
+      if (current?.source === 'manual') return { duplicate: false, needsReview: true };
+      const facts = await tx.clockEvent.findMany({ where: { entryId }, orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }] });
+      const start = facts.find(e => e.kind === 'in');
+      const end = facts.find(e => e.kind === 'out' && (!start || e.occurredAt >= start.occurredAt));
+      const basis = start ?? end ?? facts[0];
+      const workedOn = date(dayInZone(basis.occurredAt, user.time_zone));
+      const allocation = await tx.allocation.findUnique({ where: { companyId_workerId_day: { companyId: user.company_id, workerId: worker.id, day: workedOn } } });
+      const startAt = start?.occurredAt ?? null, endAt = end?.occurredAt ?? null;
+      const minutes = startAt && endAt ? Math.floor(+endAt / 60000) - Math.floor(+startAt / 60000) : null;
+      const number = entry.currentVersion + 1;
+      await tx.entryVersion.create({ data: { companyId: user.company_id, entryId, number, siteId: basis.siteId, tradeId: allocation?.tradeId ?? worker.tradeId, startAt, endAt, workedOn, minutes, source: 'clock', authorId: user.id } });
+      await tx.workEntry.update({ where: { id: entryId }, data: { currentVersion: number } });
+      return { duplicate: false };
+    });
+  }
+  list(user: CurrentUser) {
+    return this.tenant.inCompany(user.company_id, async tx => {
+      const worker = user.role === 'worker' ? await tx.worker.findUnique({ where: { userId: user.id } }) : null;
+      if (user.role === 'worker' && !worker) return [];
+      const ids = user.role === 'foreman' ? await this.scope.siteIds(tx, user) : null;
+      const entries = await tx.workEntry.findMany({ where: worker ? { workerId: worker.id } : {}, include: { worker: true, versions: { orderBy: { number: 'desc' }, include: { site: true, trade: true, author: { select: { id: true, name: true } } } }, events: { orderBy: { occurredAt: 'asc' } } }, orderBy: { createdAt: 'desc' } });
+      const allocations = await tx.allocation.findMany();
+      return entries.filter(e => !ids || ids.includes(e.versions[0]?.siteId)).map(e => {
+        const current = e.versions[0];
+        const allocation = allocations.find(a => a.workerId === e.workerId && +a.day === +current.workedOn);
+        const alerts: string[] = [];
+        if (current.minutes === null) alerts.push('Registo incompleto: falta entrada ou saída.');
+        if (!allocation || allocation.siteId !== current.siteId) alerts.push('Fora da distribuição.');
+        if (e.events.some(ev => Math.abs(+ev.receivedAt - +ev.occurredAt) > 86400000)) alerts.push('Marcação recebida com atraso ou relógio desviado.');
+        if (current.source === 'manual' && e.events.some(ev => ev.receivedAt > current.createdAt)) alerts.push('Marcação tardia após correção manual: requer revisão.');
+        if (e.events.filter(ev => ev.kind === 'in').length > 1 || e.events.filter(ev => ev.kind === 'out').length > 1 || e.events.some(ev => ev.siteId !== current.siteId) || e.events.some(ev => ev.kind === 'out' && current.startAt && ev.occurredAt < current.startAt)) alerts.push('Marcações inconsistentes: requer revisão.');
+        return { ...e, versions: ids ? e.versions.filter(v => ids.includes(v.siteId)) : e.versions, events: ids ? e.events.filter(ev => ids.includes(ev.siteId)) : e.events, current, alerts, overtime: (current.minutes ?? 0) > 480 };
+      });
+    });
+  }
+  async team(user: CurrentUser) {
+    const entries = await this.list(user);
+    const today = dayInZone(new Date(), user.time_zone);
+    const missing = await this.tenant.inCompany(user.company_id, async tx => {
+      const ids = await this.scope.siteIds(tx, user);
+      const allocated = await tx.allocation.findMany({ where: { day: date(today), siteId: { in: ids } }, include: { worker: true, site: true } });
+      return allocated.filter(a => !entries.some(e => e.workerId === a.workerId && e.current.workedOn.toISOString().startsWith(today) && e.current.startAt));
+    });
+    return { entries, missing };
+  }
+}

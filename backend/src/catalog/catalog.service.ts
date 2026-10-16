@@ -41,6 +41,7 @@ export class CatalogService {
         if (id) {
           const old = await tx.site.findUnique({ where: { id } });
           if (!old) throw new NotFoundException('Obra não encontrada.');
+          if (old.clientId !== clientId && await tx.entryVersion.count({ where: { siteId: id } })) throw new BadRequestException('Obra com horas: transfira os registos para outra obra em vez de mudar o cliente.');
         }
         const data = { ...base, clientId, location: typeof input.location === 'string' ? input.location.trim() : '' };
         return id ? tx.site.update({ where: { id }, data }) : tx.site.create({ data: { ...data, companyId } });
