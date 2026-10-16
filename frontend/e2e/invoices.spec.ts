@@ -217,3 +217,34 @@ test("consulta de faturas funciona num ecrã móvel sem transbordar", async ({
     ),
   ).toBe(true);
 });
+
+test("administrativo consulta a faturação com nomes longos em 390 px", async ({
+  page,
+  request,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const users = (await (await request.get("/api/demo-users")).json()) as {
+    id: number;
+    role: string;
+    name: string;
+  }[];
+  const admin = users.find((user) => user.role === "admin")!;
+  const response = await request.post("/api/catalog/clients", {
+    headers: { "X-User-Id": String(admin.id) },
+    data: {
+      name: `Cliente de demonstração com nome comercial longo para verificar a largura no telemóvel ${randomUUID()}`,
+    },
+  });
+  expect(response.ok()).toBe(true);
+  const client = await response.json();
+  await page.goto("/");
+  await page.getByRole("button", { name: new RegExp(admin.name) }).click();
+  await page
+    .getByRole("combobox", { name: "Cliente da fatura" })
+    .selectOption(String(client.id));
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});

@@ -106,7 +106,7 @@ test('fila IndexedDB sobrevive a reload e troca de pessoa, sem duplicar o turno'
   const queued = await page.evaluate(
     () =>
       new Promise<any[]>((resolve, reject) => {
-        const r = indexedDB.open('fonsat-clock-v1', 1);
+        const r = indexedDB.open('fonsat-clock-v1');
         r.onsuccess = () => {
           const db = r.result;
           const q = db.transaction('events').objectStore('events').getAll();
@@ -223,6 +223,7 @@ test('admin resolve saída esquecida pela interface e vê o histórico', async (
   await page
     .getByRole('button', { name: 'Atualizar equipa', exact: true })
     .click();
+  await page.getByRole('checkbox', { name: 'Só pendências' }).uncheck();
   await record
     .getByRole('button', { name: 'Corrigir João Silva', exact: true })
     .click();
