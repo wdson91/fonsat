@@ -420,7 +420,7 @@ function Dashboard({
             <WorkerClock key={me.id} me={me} />
           ) : null}
           {staff && <Operations key={me.id} me={me} />}
-          {(me.role === "admin" || me.role === "client") && <InvoicesPanel key={me.id} userId={me.id} role={me.role} />}
+          {(me.role === "admin" || me.role === "client") && <InvoicesPanel key={`invoices-${me.id}`} userId={me.id} role={me.role} />}
           <footer className="dashboard-footer">
             <span>FONSAT · Gestão de equipas</span>
             <button className="quiet" onClick={() => onSelect(null)}>
