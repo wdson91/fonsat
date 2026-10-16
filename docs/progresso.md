@@ -48,3 +48,9 @@ A consulta `npm audit --omit=dev` efetuada durante a instalação reportou alert
 Validação de 16 de outubro de 2026: cadastros, distribuição semanal, ponto com fila IndexedDB, correções versionadas, pendências, preços e rascunhos foram implementados em commits por comportamento. A separação `PrismaService`/`TenantService` foi concluída mantendo RLS.
 
 A verificação conjunta do checkout passou com 92 testes backend, 24 frontend, tipos e builds de produção. Os 8 cenários Chromium de identidade e os 4 operacionais passaram, incluindo captura sem rede, persistência da fila, troca de pessoa e conflito de correção. Os 2 cenários financeiros passaram na repetição dirigida após a correção paralela da expansão da explicação. A validação e o âmbito estão em [fases-2-5.md](fases-2-5.md). Emissão e ajustes são da implementação paralela das fases 6/7.
+
+## Entrega 3 — Fases 6 e 7
+
+Emissão atómica e imutável, contador por empresa/ano, revalidação do conteúdo revisto e snapshots de valores, nomes, preços, versões, correções e exclusões. Ajustes sucessivos usam o total corrigido arredondado menos o acumulado efetivamente faturado, por origem e cliente. Transferências mantêm o crédito e o débito independentes. O cliente consulta apenas os seus documentos emitidos, com detalhe das linhas.
+
+Integração comprovada com as fontes reais das fases 2 a 5. A suíte conjunta passou com 92 testes backend e 24 frontend; tipos, builds e os 2 cenários Chromium financeiros passaram. Migrações limpas, rollback, concorrência, isolamento e vista móvel foram verificados. Contratos, regras e evidência em [fases-6-7.md](fases-6-7.md).
