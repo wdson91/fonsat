@@ -13,6 +13,9 @@ enum UserRole {
   client
 }
 model Company {
+  rates Rate[]
+  billingDrafts BillingDraft[]
+  exclusions DraftExclusion[]
   id Int @id @default(autoincrement())
   name String @unique
   brandColor String @default("#ec405c") @map("brand_color")
@@ -31,6 +34,9 @@ model Company {
   @@map("companies")
 }
 model DemoUser {
+  client Client?
+  generatedDrafts BillingDraft[]
+  exclusions DraftExclusion[]
   id Int @id @default(autoincrement())
   companyId Int @map("company_id")
   name String
@@ -77,6 +83,7 @@ model SiteResponsibility {
 }
 
 model Trade {
+  rates Rate[]
   versions EntryVersion[]
   id Int @id @default(autoincrement())
   companyId Int @map("company_id")
@@ -90,6 +97,11 @@ model Trade {
   @@map("trades")
 }
 model Client {
+  userId Int? @unique @map("user_id")
+  user DemoUser? @relation(fields: [companyId, userId], references: [companyId, id])
+  rates Rate[]
+  drafts BillingDraft[]
+  @@unique([companyId, userId])
   id Int @id @default(autoincrement())
   companyId Int @map("company_id")
   name String
@@ -138,6 +150,7 @@ model Allocation {
 }
 
 model WorkEntry {
+  exclusions DraftExclusion[]
   id String @id @db.Uuid
   companyId Int @map("company_id")
   workerId Int @map("worker_id")
@@ -200,4 +213,69 @@ model AuditEvent {
   company Company @relation(fields: [companyId], references: [id])
   author DemoUser @relation(fields: [companyId, authorId], references: [companyId, id])
   @@map("audit_events")
+}
+
+model Rate {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  clientId Int @map("client_id")
+  tradeId Int @map("trade_id")
+  cents Int
+  startsOn DateTime @db.Date @map("starts_on")
+  endsOn DateTime? @db.Date @map("ends_on")
+  company Company @relation(fields:[companyId], references:[id])
+  client Client @relation(fields:[companyId,clientId], references:[companyId,id])
+  trade Trade @relation(fields:[companyId,tradeId], references:[companyId,id])
+  @@unique([companyId,id])
+  @@map("rates")
+}
+model BillingDraft {
+  id String @id @default(uuid()) @db.Uuid
+  companyId Int @map("company_id")
+  clientId Int @map("client_id")
+  period String
+  snapshot Json
+  generatedBy Int @map("generated_by")
+  generatedAt DateTime @default(now()) @map("generated_at")
+  company Company @relation(fields:[companyId], references:[id])
+  client Client @relation(fields:[companyId,clientId], references:[companyId,id])
+  author DemoUser @relation(fields:[companyId,generatedBy], references:[companyId,id])
+  exclusions DraftExclusion[]
+  @@unique([companyId,id])
+  @@unique([companyId,clientId,period])
+  @@map("billing_drafts")
+}
+model DraftExclusion {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  draftId String @db.Uuid @map("draft_id")
+  entryId String @db.Uuid @map("entry_id")
+  reason String
+  authorId Int @map("author_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  company Company @relation(fields:[companyId], references:[id])
+  draft BillingDraft @relation(fields:[companyId,draftId], references:[companyId,id])
+  entry WorkEntry @relation(fields:[companyId,entryId], references:[companyId,id])
+  author DemoUser @relation(fields:[companyId,authorId], references:[companyId,id])
+  @@unique([companyId,draftId,entryId])
+  @@map("draft_exclusions")
+}
+// Read model of the immutable documents maintained by the parallel phases 6–7.
+model IssuedFinancialDocument {
+  id String @id @db.Uuid
+  companyId Int @map("company_id")
+  clientId Int @map("client_id")
+  period String
+  sequenceYear Int @map("sequence_year")
+  sequenceNumber Int @map("sequence_number")
+  number String
+  reviewHash String @map("review_hash")
+  snapshot Json
+  totalCents BigInt @map("total_cents")
+  issuedBy Int @map("issued_by")
+  issuedAt DateTime @db.Timestamptz @map("issued_at")
+  @@unique([companyId,id])
+  @@unique([companyId,clientId,period])
+  @@unique([companyId,sequenceYear,sequenceNumber])
+  @@map("financial_invoices")
 }

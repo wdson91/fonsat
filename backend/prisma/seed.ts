@@ -68,7 +68,8 @@ async function seed() {
       await tx.trade.upsert({ where: { companyId_name: { companyId: company.id, name: 'Pintor' } }, update: {}, create: { companyId: company.id, name: 'Pintor' } });
       await tx.worker.upsert({ where: { companyId_name: { companyId: company.id, name: users[0].name } }, update: {}, create: { companyId: company.id, name: users[0].name, userId: users[0].id, tradeId: trade.id } });
       const clients = [];
-      for (const u of [users[3], users[5]]) clients.push(await tx.client.upsert({ where: { companyId_name: { companyId: company.id, name: u.name } }, update: {}, create: { companyId: company.id, name: u.name } }));
+      for (const u of [users[3], users[5]]) clients.push(await tx.client.upsert({ where: { companyId_name: { companyId: company.id, name: u.name } }, update: {}, create: { companyId: company.id, name: u.name, userId: u.id } }));
+      for (let i=0;i<clients.length;i++) if (!clients[i].userId) await tx.client.update({ where: { id: clients[i].id }, data: { userId: [users[3],users[5]][i].id } });
       for (const [name, foreman] of [
         ["Edifício Aurora", users[1]],
         ["Armazém Norte", users[4]],
