@@ -17,6 +17,10 @@ model Company {
   name String @unique
   brandColor String @default("#ec405c") @map("brand_color")
   timeZone String @default("Europe/Lisbon") @map("time_zone")
+  trades Trade[]
+  clients Client[]
+  workers Worker[]
+  allocations Allocation[]
   users DemoUser[]
   sites Site[]
   responsibilities SiteResponsibility[]
@@ -27,6 +31,8 @@ model DemoUser {
   companyId Int @map("company_id")
   name String
   role UserRole
+  worker Worker?
+  allocations Allocation[]
   company Company @relation(fields: [companyId], references: [id])
   responsibilities SiteResponsibility[]
   @@unique([companyId, id])
@@ -34,6 +40,11 @@ model DemoUser {
   @@map("demo_users")
 }
 model Site {
+  clientId Int? @map("client_id")
+  location String @default("")
+  active Boolean @default(true)
+  client Client? @relation(fields: [companyId, clientId], references: [companyId, id])
+  allocations Allocation[]
   id Int @id @default(autoincrement())
   companyId Int @map("company_id")
   name String
@@ -55,4 +66,63 @@ model SiteResponsibility {
   user DemoUser @relation(fields: [companyId, userId], references: [companyId, id])
   @@unique([companyId, siteId, userId, startsOn])
   @@map("site_responsibilities")
+}
+
+model Trade {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  name String
+  active Boolean @default(true)
+  company Company @relation(fields: [companyId], references: [id])
+  workers Worker[]
+  allocations Allocation[]
+  @@unique([companyId, id])
+  @@unique([companyId, name])
+  @@map("trades")
+}
+model Client {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  name String
+  taxId String @default("") @map("tax_id")
+  active Boolean @default(true)
+  company Company @relation(fields: [companyId], references: [id])
+  sites Site[]
+  @@unique([companyId, id])
+  @@unique([companyId, name])
+  @@map("clients")
+}
+model Worker {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  name String
+  tradeId Int @map("trade_id")
+  userId Int? @unique @map("user_id")
+  active Boolean @default(true)
+  company Company @relation(fields: [companyId], references: [id])
+  trade Trade @relation(fields: [companyId, tradeId], references: [companyId, id])
+  @@unique([companyId, userId])
+  user DemoUser? @relation(fields: [companyId, userId], references: [companyId, id])
+  allocations Allocation[]
+  @@unique([companyId, id])
+  @@unique([companyId, name])
+  @@map("workers")
+}
+model Allocation {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  workerId Int @map("worker_id")
+  siteId Int @map("site_id")
+  tradeId Int? @map("trade_id")
+  day DateTime @db.Date
+  changedBy Int @map("changed_by")
+  changedAt DateTime @updatedAt @map("changed_at")
+  company Company @relation(fields: [companyId], references: [id])
+  worker Worker @relation(fields: [companyId, workerId], references: [companyId, id])
+  site Site @relation(fields: [companyId, siteId], references: [companyId, id])
+  trade Trade? @relation(fields: [companyId, tradeId], references: [companyId, id])
+  author DemoUser @relation(fields: [companyId, changedBy], references: [companyId, id])
+  @@unique([companyId, id])
+  @@unique([companyId, workerId, day])
+  @@map("allocations")
 }

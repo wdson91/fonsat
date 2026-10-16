@@ -64,6 +64,11 @@ async function seed() {
           }),
         );
       }
+      const trade = await tx.trade.upsert({ where: { companyId_name: { companyId: company.id, name: 'Pedreiro' } }, update: {}, create: { companyId: company.id, name: 'Pedreiro' } });
+      await tx.trade.upsert({ where: { companyId_name: { companyId: company.id, name: 'Pintor' } }, update: {}, create: { companyId: company.id, name: 'Pintor' } });
+      await tx.worker.upsert({ where: { companyId_name: { companyId: company.id, name: users[0].name } }, update: {}, create: { companyId: company.id, name: users[0].name, userId: users[0].id, tradeId: trade.id } });
+      const clients = [];
+      for (const u of [users[3], users[5]]) clients.push(await tx.client.upsert({ where: { companyId_name: { companyId: company.id, name: u.name } }, update: {}, create: { companyId: company.id, name: u.name } }));
       for (const [name, foreman] of [
         ["Edifício Aurora", users[1]],
         ["Armazém Norte", users[4]],
@@ -73,6 +78,7 @@ async function seed() {
           update: {},
           create: { companyId: company.id, name },
         });
+        if (!site.clientId) await tx.site.update({ where: { id: site.id }, data: { clientId: clients[name === 'Edifício Aurora' ? 0 : 1].id } });
         const startsOn = new Date("2026-01-01T00:00:00Z");
         await tx.siteResponsibility.upsert({
           where: {
