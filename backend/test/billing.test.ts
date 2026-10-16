@@ -19,7 +19,7 @@ let app: INestApplication,
 const call = (
   method: 'get' | 'post' | 'patch',
   path: string,
-  body?: unknown,
+  body?: object,
   id = admin,
 ) =>
   request(app.getHttpServer())
@@ -212,4 +212,23 @@ it('mostra bloqueios por preço ausente e registo incompleto e exige motivo para
 it('a fonte comercial usa vínculo explícito e não o nome do utilizador', async () => {
   const clients = await tenant.inCompany(company, (tx) => tx.client.findMany());
   expect(clients.filter((c) => c.userId !== null)).toHaveLength(2);
+});
+
+it('duas criações concorrentes do mesmo preço resultam num único preço', async () => {
+  const t = (
+    await call('post', '/catalog/trades', {
+      name: 'Concorrência ' + randomUUID(),
+    })
+  ).body.id;
+  const body = {
+    clientId: client,
+    tradeId: t,
+    cents: 100,
+    startsOn: '2025-01-01',
+  };
+  const results = await Promise.all([
+    call('post', '/billing/rates', body),
+    call('post', '/billing/rates', body),
+  ]);
+  expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
 });
