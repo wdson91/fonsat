@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { Team } from "./team";
 import { api, type CurrentUser } from '../lib/api';
 import { addDays, command, companyDay, monday, type Allocation, type Catalog, type Named } from '../lib/operations';
 
@@ -8,9 +9,10 @@ export function Operations({ me }: { me: CurrentUser }) {
   return <section className="operations" aria-label="Operação">
     <nav className="operation-tabs" aria-label="Áreas de trabalho">
       <button onClick={() => setTab('planning')} aria-pressed={tab === 'planning'}>Distribuição</button>
+      <button onClick={() => setTab('team')} aria-pressed={tab === 'team'}>Equipa e pendências</button>
       {me.role === 'admin' && <button onClick={() => setTab('catalog')} aria-pressed={tab === 'catalog'}>Cadastros</button>}
     </nav>
-    {tab && <CatalogArea key={me.id + tab} me={me} planning={tab === 'planning'} />}
+    {tab === 'team' ? <Team key={me.id + tab} me={me}/> : tab && <CatalogArea key={me.id + tab} me={me} planning={tab === 'planning'} />}
   </section>;
 }
 export function Choices({ items, empty = 'Selecionar…' }: { items: Named[] | {id:number; name:string}[]; empty?: string }) {
