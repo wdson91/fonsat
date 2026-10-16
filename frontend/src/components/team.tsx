@@ -1,15 +1,15 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { api, ApiError, type CurrentUser } from '../lib/api';
-import { command, type Catalog } from '../lib/operations';
-import type { WorkEntry } from '../lib/attendance';
-import { Choices } from './operations';
+"use client";
+import { useEffect, useState } from "react";
+import { api, ApiError, type CurrentUser } from "../lib/api";
+import { command, type Catalog } from "../lib/operations";
+import type { WorkEntry } from "../lib/attendance";
+import { Choices } from "./operations";
 interface TeamData {
   entries: WorkEntry[];
   missing: { id: number; worker: { name: string }; site: { name: string } }[];
 }
 function localInput(value: string | null) {
-  if (!value) return '';
+  if (!value) return "";
   const d = new Date(value);
   return new Date(+d - d.getTimezoneOffset() * 60000)
     .toISOString()
@@ -19,7 +19,7 @@ export function Team({ me }: { me: CurrentUser }) {
   const [data, setData] = useState<TeamData | null>(null),
     [catalog, setCatalog] = useState<Catalog | null>(null),
     [editing, setEditing] = useState<WorkEntry | null>(null),
-    [message, setMessage] = useState(''),
+    [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [stale, setStale] = useState(false),
     [revision, refresh] = useState(0),
@@ -27,8 +27,8 @@ export function Team({ me }: { me: CurrentUser }) {
   useEffect(() => {
     const c = new AbortController();
     Promise.all([
-      api<TeamData>('/attendance/team', me.id, c.signal),
-      api<Catalog>('/catalog', me.id, c.signal),
+      api<TeamData>("/attendance/team", me.id, c.signal),
+      api<Catalog>("/catalog", me.id, c.signal),
     ])
       .then(([team, cat]) => {
         if (!c.signal.aborted) {
@@ -44,16 +44,16 @@ export function Team({ me }: { me: CurrentUser }) {
   }, [me.id, revision]);
   const reload = (clearMessage = true) => {
     setEditing(null);
-    if (clearMessage) setMessage('');
+    if (clearMessage) setMessage("");
     refresh((n) => n + 1);
   };
   async function correct(form: HTMLFormElement) {
     if (!editing || stale) return;
     setBusy(true);
-    setMessage('');
+    setMessage("");
     const body = Object.fromEntries(new FormData(form));
     try {
-      await command(me.id, `/attendance/${editing.id}/corrections`, 'POST', {
+      await command(me.id, `/attendance/${editing.id}/corrections`, "POST", {
         expectedVersion: editing.currentVersion,
         siteId: Number(body.siteId),
         tradeId: Number(body.tradeId),
@@ -61,7 +61,7 @@ export function Team({ me }: { me: CurrentUser }) {
         endAt: body.endAt ? new Date(String(body.endAt)).toISOString() : null,
         reason: body.reason,
       });
-      setMessage('Correção guardada; o original foi preservado.');
+      setMessage("Correção guardada; o original foi preservado.");
       reload(false);
     } catch (e) {
       setMessage((e as Error).message);
@@ -79,7 +79,7 @@ export function Team({ me }: { me: CurrentUser }) {
             type="checkbox"
             checked={onlyPending}
             onChange={(e) => setOnlyPending(e.target.checked)}
-          />{' '}
+          />{" "}
           Só pendências
         </label>
         <button disabled={busy} onClick={() => reload()}>
@@ -88,7 +88,11 @@ export function Team({ me }: { me: CurrentUser }) {
       </div>
       {message && <p role="alert">{message}</p>}
       {!data ? (
-        <p>{message ? 'Não foi possível carregar a equipa. Use Atualizar equipa para tentar novamente.' : 'A carregar a equipa…'}</p>
+        <p>
+          {message
+            ? "Não foi possível carregar a equipa. Use Atualizar equipa para tentar novamente."
+            : "A carregar a equipa…"}
+        </p>
       ) : (
         <>
           <h3>Sem entrada hoje</h3>
@@ -113,12 +117,12 @@ export function Team({ me }: { me: CurrentUser }) {
                       {e.worker.name} · {e.current.site.name}
                     </strong>
                     <p>
-                      {e.current.workedOn.slice(0, 10)} ·{' '}
+                      {e.current.workedOn.slice(0, 10)} ·{" "}
                       {e.current.minutes === null
-                        ? 'Incompleto'
-                        : `${e.current.minutes} minutos`}{' '}
+                        ? "Incompleto"
+                        : `${e.current.minutes} minutos`}{" "}
                       · Versão {e.currentVersion}
-                      {e.overtime ? ' · Horas extra' : ''}
+                      {e.overtime ? " · Horas extra" : ""}
                     </p>
                     {e.alerts.map((a) => (
                       <p className="pending-alert" key={a}>
@@ -139,43 +143,43 @@ export function Team({ me }: { me: CurrentUser }) {
                         <article key={v.id}>
                           <p>
                             <strong>
-                              Versão {v.number} ·{' '}
-                              {v.source === 'manual' ? 'Correção' : 'Marcações'}
+                              Versão {v.number} ·{" "}
+                              {v.source === "manual" ? "Correção" : "Marcações"}
                             </strong>
                           </p>
                           <p>
                             {v.startAt
-                              ? new Date(v.startAt).toLocaleString('pt-PT', {
+                              ? new Date(v.startAt).toLocaleString("pt-PT", {
                                   timeZone: me.time_zone,
                                 })
-                              : 'Sem entrada'}{' '}
-                            →{' '}
+                              : "Sem entrada"}{" "}
+                            →{" "}
                             {v.endAt
-                              ? new Date(v.endAt).toLocaleString('pt-PT', {
+                              ? new Date(v.endAt).toLocaleString("pt-PT", {
                                   timeZone: me.time_zone,
                                 })
-                              : 'Sem saída'}{' '}
-                            · {v.minutes ?? '—'} min
+                              : "Sem saída"}{" "}
+                            · {v.minutes ?? "—"} min
                           </p>
                           <p>
-                            {v.author.name} ·{' '}
-                            {new Date(v.createdAt).toLocaleString('pt-PT', {
+                            {v.author.name} ·{" "}
+                            {new Date(v.createdAt).toLocaleString("pt-PT", {
                               timeZone: me.time_zone,
                             })}
-                            {v.reason ? ` · ${v.reason}` : ''}
+                            {v.reason ? ` · ${v.reason}` : ""}
                           </p>
                         </article>
                       ))}
                       <ul>
                         {e.events.map((ev) => (
                           <li key={ev.id}>
-                            {ev.kind === 'in' ? 'Entrada' : 'Saída'} ·
-                            dispositivo:{' '}
-                            {new Date(ev.occurredAt).toLocaleString('pt-PT', {
+                            {ev.kind === "in" ? "Entrada" : "Saída"} ·
+                            dispositivo:{" "}
+                            {new Date(ev.occurredAt).toLocaleString("pt-PT", {
                               timeZone: me.time_zone,
-                            })}{' '}
-                            · recebida:{' '}
-                            {new Date(ev.receivedAt).toLocaleString('pt-PT', {
+                            })}{" "}
+                            · recebida:{" "}
+                            {new Date(ev.receivedAt).toLocaleString("pt-PT", {
                               timeZone: me.time_zone,
                             })}
                           </li>

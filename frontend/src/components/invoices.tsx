@@ -357,16 +357,23 @@ function Line({
               <p>Nenhuma.</p>
             ) : (
               <ul>
-                  {line[side].slice().sort((a, b) => `${a.workedOn}:${a.startAt ?? ''}:${a.workerName}`.localeCompare(`${b.workedOn}:${b.startAt ?? ''}:${b.workerName}`)).map((entry) => (
-                  <li key={entry.id}>
-                    Versão {entry.version} · {entry.workerName} ·{" "}
-                    {entry.workedOn} · {entry.minutes} minutos
-                    {entry.startAt && entry.endAt
-                      ? ` · ${instant(entry.startAt)} → ${instant(entry.endAt)}`
-                      : ""}
-                    {entry.reason ? ` · ${entry.reason}` : ""}
-                  </li>
-                ))}
+                {line[side]
+                  .slice()
+                  .sort((a, b) =>
+                    `${a.workedOn}:${a.startAt ?? ""}:${a.workerName}`.localeCompare(
+                      `${b.workedOn}:${b.startAt ?? ""}:${b.workerName}`,
+                    ),
+                  )
+                  .map((entry) => (
+                    <li key={entry.id}>
+                      Versão {entry.version} · {entry.workerName} ·{" "}
+                      {entry.workedOn} · {entry.minutes} minutos
+                      {entry.startAt && entry.endAt
+                        ? ` · ${instant(entry.startAt)} → ${instant(entry.endAt)}`
+                        : ""}
+                      {entry.reason ? ` · ${entry.reason}` : ""}
+                    </li>
+                  ))}
               </ul>
             )}
           </div>

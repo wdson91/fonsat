@@ -1,8 +1,8 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { api, type CurrentUser } from '../lib/api';
-import { command, companyDay, type Catalog } from '../lib/operations';
-import { Choices } from './operations';
+"use client";
+import { useEffect, useState } from "react";
+import { api, type CurrentUser } from "../lib/api";
+import { command, companyDay, type Catalog } from "../lib/operations";
+import { Choices } from "./operations";
 interface Rate {
   id: number;
   clientId: number;
@@ -53,24 +53,24 @@ interface Draft {
   }[];
 }
 const money = (cents: number) =>
-  new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
+  new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(
     cents / 100,
   );
 export function Billing({ me }: { me: CurrentUser }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null),
     [rates, setRates] = useState<Rate[]>([]),
-    [message, setMessage] = useState(''),
+    [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [revision, refresh] = useState(0),
     [draft, setDraft] = useState<Draft | null>(null),
-    [clientId, setClientId] = useState(''),
+    [clientId, setClientId] = useState(""),
     [period, setPeriod] = useState(companyDay(me.time_zone).slice(0, 7)),
     [closing, setClosing] = useState<Rate | null>(null);
   useEffect(() => {
     const c = new AbortController();
     Promise.all([
-      api<Catalog>('/catalog', me.id, c.signal),
-      api<Rate[]>('/billing/rates', me.id, c.signal),
+      api<Catalog>("/catalog", me.id, c.signal),
+      api<Rate[]>("/billing/rates", me.id, c.signal),
     ])
       .then(([cat, price]) => {
         if (!c.signal.aborted) {
@@ -85,15 +85,15 @@ export function Billing({ me }: { me: CurrentUser }) {
   }, [me.id, revision]);
   async function price(form: HTMLFormElement) {
     setBusy(true);
-    setMessage('');
+    setMessage("");
     const d = Object.fromEntries(new FormData(form));
     try {
       const decimal = String(d.price);
       if (!/^\d+(?:[.,]\d{1,2})?$/.test(decimal))
-        throw new Error('Indique o preço com até duas casas decimais.');
-      const [whole, fraction = ''] = decimal.replace(',', '.').split('.');
-      const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-      await command(me.id, '/billing/rates', 'POST', {
+        throw new Error("Indique o preço com até duas casas decimais.");
+      const [whole, fraction = ""] = decimal.replace(",", ".").split(".");
+      const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+      await command(me.id, "/billing/rates", "POST", {
         clientId: Number(d.clientId),
         tradeId: Number(d.tradeId),
         cents,
@@ -102,7 +102,7 @@ export function Billing({ me }: { me: CurrentUser }) {
       });
       refresh((n) => n + 1);
       setDraft(null);
-      setMessage('Preço guardado. Gere novamente o rascunho para o atualizar.');
+      setMessage("Preço guardado. Gere novamente o rascunho para o atualizar.");
       form.reset();
     } catch (e) {
       setMessage((e as Error).message);
@@ -112,11 +112,11 @@ export function Billing({ me }: { me: CurrentUser }) {
   }
   async function generate() {
     setBusy(true);
-    setMessage('');
+    setMessage("");
     setDraft(null);
     try {
       setDraft(
-        await command<Draft>(me.id, '/billing/drafts', 'POST', {
+        await command<Draft>(me.id, "/billing/drafts", "POST", {
           clientId: Number(clientId),
           period,
         }),
@@ -132,7 +132,18 @@ export function Billing({ me }: { me: CurrentUser }) {
       <h2>Preços e faturação mensal</h2>
       {message && <p role="alert">{message}</p>}
       {!catalog ? (
-        message ? <button onClick={() => { setMessage(''); refresh((n) => n + 1); }}>Tentar carregar preços</button> : <p>A carregar preços…</p>
+        message ? (
+          <button
+            onClick={() => {
+              setMessage("");
+              refresh((n) => n + 1);
+            }}
+          >
+            Tentar carregar preços
+          </button>
+        ) : (
+          <p>A carregar preços…</p>
+        )
       ) : (
         <>
           <details>
@@ -179,10 +190,10 @@ export function Billing({ me }: { me: CurrentUser }) {
               {rates.map((r) => (
                 <li key={r.id}>
                   <span>
-                    {catalog.clients.find((c) => c.id === r.clientId)?.name} ·{' '}
-                    {catalog.trades.find((t) => t.id === r.tradeId)?.name} ·{' '}
-                    {money(r.cents)}/h · {r.startsOn.slice(0, 10)} até{' '}
-                    {r.endsOn?.slice(0, 10) ?? 'sem fim'}
+                    {catalog.clients.find((c) => c.id === r.clientId)?.name} ·{" "}
+                    {catalog.trades.find((t) => t.id === r.tradeId)?.name} ·{" "}
+                    {money(r.cents)}/h · {r.startsOn.slice(0, 10)} até{" "}
+                    {r.endsOn?.slice(0, 10) ?? "sem fim"}
                   </span>
                   <button onClick={() => setClosing(r)}>Fechar vigência</button>
                 </li>
@@ -199,14 +210,14 @@ export function Billing({ me }: { me: CurrentUser }) {
                     await command(
                       me.id,
                       `/billing/rates/${closing.id}`,
-                      'PATCH',
-                      { endsOn: data.get('endsOn') },
+                      "PATCH",
+                      { endsOn: data.get("endsOn") },
                     );
                     setClosing(null);
                     setDraft(null);
                     refresh((n) => n + 1);
                     setMessage(
-                      'Vigência fechada. Pode criar o preço seguinte.',
+                      "Vigência fechada. Pode criar o preço seguinte.",
                     );
                   } catch (error) {
                     setMessage((error as Error).message);
@@ -274,13 +285,13 @@ export function Billing({ me }: { me: CurrentUser }) {
                 Rascunho · {draft.snapshot.client.name} · {draft.period}
               </h3>
               <p>
-                {draft.snapshot.totalMinutes} minutos ·{' '}
+                {draft.snapshot.totalMinutes} minutos ·{" "}
                 <strong>{money(draft.snapshot.totalCents)}</strong>
               </p>
               <p>
                 {draft.snapshot.problems.length
                   ? `${draft.snapshot.problems.length} bloqueios por resolver`
-                  : 'Sem bloqueios. Revise as linhas e os registos.'}
+                  : "Sem bloqueios. Revise as linhas e os registos."}
               </p>
               {draft.snapshot.problems.map((problem, index) => (
                 <div className="billing-problem" key={problem.entryId + index}>
@@ -292,21 +303,21 @@ export function Billing({ me }: { me: CurrentUser }) {
                     onSubmit={async (e) => {
                       e.preventDefault();
                       const reason = new FormData(e.currentTarget).get(
-                        'reason',
+                        "reason",
                       );
                       setBusy(true);
                       try {
                         await command(
                           me.id,
                           `/billing/drafts/${draft.id}/exclusions`,
-                          'POST',
+                          "POST",
                           { entryId: problem.entryId, reason },
                         );
                         setDraft(
                           await command<Draft>(
                             me.id,
-                            '/billing/drafts',
-                            'POST',
+                            "/billing/drafts",
+                            "POST",
                             { clientId: Number(clientId), period },
                           ),
                         );
@@ -353,7 +364,7 @@ export function Billing({ me }: { me: CurrentUser }) {
                               <p key={e.id}>
                                 {e.workerName} · {e.workedOn} · {e.minutes} min
                                 · v{e.version}
-                                {e.reason ? ` · ${e.reason}` : ''}
+                                {e.reason ? ` · ${e.reason}` : ""}
                               </p>
                             ))}
                           </details>
