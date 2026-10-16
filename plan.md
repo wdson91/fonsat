@@ -1,5 +1,7 @@
 # FONSAT — Plano de implementação por fases com TDD
 
+> **Estado em 16/10/2026:** fases 0 a 9 concluídas e validadas. A revisão acrescentou a grelha diária de Trabalho/Pausa pedida nas imagens. Resultado final: 97 testes backend, 38 frontend e 22 cenários Chromium, tipos e builds aprovados. O arranque e os testes por Docker Compose foram verificados em ambientes isolados. Ver [progresso](docs/progresso.md), [entrega 8/9](docs/fases-8-9.md) e [roteiro](docs/ROTEIRO_DEMONSTRACAO.md). Os requisitos e documentos de planeamento originais seguem preservados abaixo.
+
 ## 1. Objetivo e decisões fechadas
 
 Implementar o caminho **distribuição → marcação → correção → faturação → explicação**, com isolamento entre empresas e histórico de commits que mostre entregas progressivas.

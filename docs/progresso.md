@@ -54,3 +54,11 @@ A verificação conjunta do checkout passou com 92 testes backend, 24 frontend, 
 Emissão atómica e imutável, contador por empresa/ano, revalidação do conteúdo revisto e snapshots de valores, nomes, preços, versões, correções e exclusões. Ajustes sucessivos usam o total corrigido arredondado menos o acumulado efetivamente faturado, por origem e cliente. Transferências mantêm o crédito e o débito independentes. O cliente consulta apenas os seus documentos emitidos, com detalhe das linhas.
 
 Integração comprovada com as fontes reais das fases 2 a 5. A suíte conjunta passou com 92 testes backend e 24 frontend; tipos, builds e os 2 cenários Chromium financeiros passaram. Migrações limpas, rollback, concorrência, isolamento e vista móvel foram verificados. Contratos, regras e evidência em [fases-6-7.md](fases-6-7.md).
+
+## Entrega 4 — Fases 8 e 9 e grelha de períodos
+
+Reabertura offline após a preparação online, fila por empresa/utilizador, retoma automática, confirmação por evento e preservação de autoria durante a troca de pessoa. O trabalhador dispõe da grelha pedida na revisão: intervalos por dia, Trabalho/Pausa, horas e localização, com Adicionar e formulário próprio. As pausas não são faturáveis.
+
+Dados completos nas duas empresas, navegação por papel, recuperação de erros, revisão dos cinco ecrãs e roteiro integral sem alterações manuais no banco. README, decisões e plano atualizados; documentos iniciais preservados. Os erros locais de Prisma e de tabelas em falta foram corrigidos e a API local foi verificada.
+
+Validação final de 16/10/2026: **97 testes backend, 38 frontend e 22 cenários Chromium passaram**, além de tipos, builds e execução dos dois comandos Docker Compose documentados em ambientes isolados. O ensaio offline fechou e reabriu um processo Chromium com perfil persistente. Detalhes e limites em [fases-8-9.md](fases-8-9.md); utilização em [ROTEIRO_DEMONSTRACAO.md](ROTEIRO_DEMONSTRACAO.md).

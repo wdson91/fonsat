@@ -1,72 +1,80 @@
 # FONSAT — Assiduidade e faturação
 
-Implementação em Next.js, NestJS, TypeScript, Prisma e PostgreSQL. O desenvolvimento começa pela base executável e pela seleção de utilizadores com isolamento entre empresas.
-
-## Organização
-
-- `frontend/`: aplicação Next.js.
-- `backend/`: API NestJS e persistência Prisma.
-- `ecras/`: cinco referências visuais do produto.
-- `plan.md`: plano por fases; a estrutura de execução usa `frontend/` e `backend/`.
-- `plano_conceitual_v2.md`: referência conceptual original.
-- `docs/enunciado.pdf`: enunciado oficial do exercício.
-- Os restantes documentos originais são preservados como histórico de planeamento.
-
-A pasta local `fonsat/` contém o projeto anterior usado como referência de comportamento e não integra esta implementação.
-
-## Primeira entrega
-
-Preparar o ambiente reproduzível e implementar «Quem está a usar?», seleção dos quatro perfis, identidade resolvida no servidor e isolamento entre empresas. A seleção é própria de uma demonstração sem login.
-
-As fases 2 a 5 também estão implementadas: cadastros e distribuição semanal, relógio de ponto com fila local, correções versionadas e preços/rascunhos. A utilização e a validação estão em [docs/fases-2-5.md](docs/fases-2-5.md). O histórico contém commits por comportamento.
-
-A primeira entrega está concluída. As instruções e os resultados de validação estão abaixo e em `docs/progresso.md`.
+Aplicação de demonstração multiempresa em Next.js, NestJS, TypeScript, Prisma e PostgreSQL. Implementa distribuição semanal, ponto online/offline, correções com histórico, preços, rascunhos, emissão imutável e ajustes sucessivos entre clientes. As fases 0 a 9 e a grelha de períodos pedida na revisão estão descritas em [plan.md](plan.md).
 
 ## Executar
 
-Requisito: Docker com Compose. Na raiz do repositório:
+Requisito: Docker com Compose. Na raiz:
 
 ```bash
 docker compose up --build
 ```
 
-Frontend: http://localhost:3000. API: http://localhost:3001/api/health. Os dados ficam num volume próprio; o arranque aplica migrações e carrega os exemplos sem duplicá-los. As credenciais padrão são exclusivas da demonstração local e podem ser substituídas com `.env`, a partir de `.env.example`.
+Abrir http://localhost:3000. API: http://localhost:3001/api/health. O arranque aplica as migrações e prepara os exemplos num volume persistente. Credenciais e portas locais podem ser alteradas com `.env`, a partir de `.env.example`. Reiniciar preserva os factos, correções e nomes editados.
+
+As duas empresas têm dois clientes, duas obras, três trabalhadores, dois ofícios, preços e distribuição. João Silva e André Costa têm um exemplo completo; Miguel Sousa e Nuno Ferreira têm uma saída em falta. Os exemplos operacionais ficam na semana da primeira preparação. A administração faz-se pela interface, sem editar o banco.
+
+## Utilização
+
+Escolher uma pessoa em «Quem está a usar?» e trocar no seletor do topo. A escolha é uma simulação de identidade; não existe login real. O servidor resolve papel, empresa e âmbito a partir de `X-User-Id`.
+
+- **Trabalhador:** grelha semanal com cada intervalo numa linha, categoria Trabalho/Pausa, horas e obra. Adicionar abre o formulário da referência visual. Os períodos de pausa não são faturáveis. A alternativa Marcar a hora atual mantém entrada/saída em tempo real.
+- **Encarregado:** distribuição e equipa nas obras da sua responsabilidade ativa; corrige com motivo e versão esperada.
+- **Administrativo:** cadastros, distribuição, correções, preços, exclusões, emissão e ajustes. Transferências entre clientes requerem este papel.
+- **Cliente:** apenas os seus documentos emitidos e a explicação das linhas.
+
+Uma correção nunca apaga o original. A emissão congela nomes, preços, valores, versões e justificações. Alterações posteriores entram apenas como diferença no documento seguinte. Crédito e débito de uma transferência mantêm-se independentes.
+
+## Usar sem rede
+
+Na primeira utilização online, escolher um trabalhador e aguardar «Ponto disponível offline neste dispositivo». Depois é possível desligar a rede, registar períodos, recarregar e fechar/reabrir o navegador com o mesmo perfil. A fila retoma automaticamente ao recuperar ligação; existe também Sincronizar agora.
+
+Trocar ou limpar a seleção conserva a fila original. Outra pessoa não a vê nem a envia. Uma resposta perdida reenvia os mesmos UUIDs, sem duplicar factos. O cache da aplicação contém apenas a estrutura e os assets; respostas da API não são guardadas pelo service worker. Os dados mínimos e a fila ficam separados por empresa/utilizador.
+
+Offline exige armazenamento disponível e uma primeira preparação online. Usar HTTPS ou localhost para o service worker. Limpar os dados do site ou fechar uma sessão privada pode eliminar o armazenamento local. Cadastros, administração e faturas exigem rede.
+
+## Testes
+
+Ambiente isolado, independente do volume da demonstração:
 
 ```bash
 docker compose -f compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
+docker compose -f compose.test.yml down
 ```
 
-Os testes usam outro projeto Compose e PostgreSQL efémero, sem portas publicadas, independente dos dados da demonstração. Para libertar os recursos de teste depois da execução: `docker compose -f compose.test.yml down`.
-
-## Desenvolvimento local
-
-Node 22.12 ou superior da série 22, npm e PostgreSQL 16. O banco deve ter o papel `fonsat_app` preparado pelo script `db/init/01-app-role.sh`; no arranque por Docker isso é automático. Na raiz: `npm ci` e `npm run db:generate`. Configurar `DATABASE_URL` para o papel de aplicação e `ADMIN_DATABASE_URL` para migrações/dados; depois executar `npm run db:migrate` e `npm run db:seed`. Em terminais separados: `npm run dev:backend` e `npm run dev:frontend`.
-
-`npm run build` compila as duas aplicações. `npm run typecheck` valida os tipos. A conexão do backend usa um papel distinto do proprietário das tabelas. A conta de migrações é usada pelo serviço `setup`, separado da API.
-
-## Selecionar utilizadores
-
-O ecrã «Quem está a usar?» agrupa os utilizadores por empresa. Na FONSAT, João Silva é trabalhador, Carlos Mendes e Rita Santos são encarregados, Sofia Ramos é administrativa, Mota Obras e Teixeira Construções são clientes. Na Construções Horizonte existem perfis equivalentes.
-
-A escolha fica guardada no browser e pode ser trocada no topo ou limpa em «Escolher outro utilizador». A identidade é enviada em `X-User-Id`; a API resolve o papel e a empresa. O administrativo vê as obras da empresa, e cada encarregado só as obras sob a sua responsabilidade ativa. As duas empresas têm obras de nomes iguais para tornar o teste de isolamento mais evidente.
-
-O trabalhador dispõe de relógio de ponto e horas da semana. Administrativo e encarregado acedem às áreas de distribuição e equipa; o administrativo também gere cadastros, preços e rascunhos. A consulta e emissão financeira são desenvolvidas na entrega paralela das fases 6/7. As regras da identidade e do banco estão em [docs/identidade-e-isolamento.md](docs/identidade-e-isolamento.md).
-
-## Testes no navegador
-
-Com a aplicação em execução e as dependências npm instaladas:
+Com uma instalação de teste da aplicação já iniciada:
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-Validam os quatro perfis, seleção por teclado, persistência após reload, troca entre empresas, 404 por identificador de outra empresa e layout móvel. Os novos cenários criam cadastros e marcações; os cenários financeiros também emitem documentos de exemplo. Executar contra uma instalação de testes. Relatórios, screenshots e traces ficam em `frontend/playwright-report` e `frontend/test-results`, fora do Git. Para usar um Chromium já instalado, definir `PLAYWRIGHT_CHROMIUM_EXECUTABLE` com o caminho do executável.
+`BASE_URL` altera o endereço do frontend; `PLAYWRIGHT_CHROMIUM_EXECUTABLE` permite usar um Chromium instalado. Os testes de navegador criam factos e documentos de demonstração. Os cenários offline são executados contra o build de produção, com a rede efetivamente desligada, incluindo um perfil persistente fechado e reaberto.
 
-## Histórico para revisão
+Os testes HTTP e de isolamento usam PostgreSQL real; as suítes financeiras e do seed criam bases temporárias próprias. A conta indicada em `ADMIN_DATABASE_URL` no ambiente de teste precisa de permissão para as criar. Os testes de identidade usam a base inicialmente migrada, antes dos dados adicionais criados pelos cenários de navegador.
+
+## Desenvolvimento local
+
+Node 22.12 ou superior da série 22, npm e PostgreSQL 16. O papel `fonsat_app` é preparado por `db/init/01-app-role.sh`; pelo Compose isso é automático. Configurar `DATABASE_URL` para a conta da aplicação e `ADMIN_DATABASE_URL` para migrações e exemplos.
 
 ```bash
-git log --reverse --oneline
+npm ci
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run dev:backend
+# Noutro terminal:
+npm run dev:frontend
 ```
 
-O histórico local foi reorganizado em commits menores por responsabilidade após a revisão do tamanho das entregas. O histórico original está preservado na branch `backup/entrega-1-antes-da-divisao`. Esta divisão organiza alterações já existentes para revisão; os resultados dos testes correspondem à versão final. Nas próximas entregas, cada comportamento será concluído, validado e registado num commit pequeno antes de começar o seguinte. O estado e a validação estão em [docs/progresso.md](docs/progresso.md).
+O script do backend regenera o Prisma antes do arranque. Depois de alterar o schema com o servidor já em watch, executar novamente `npm run db:generate` e aplicar as migrações. `npm run build`, `npm run typecheck` e `npm test` verificam as duas aplicações. O build do frontend gera o service worker com os assets e a versão dessa compilação.
+
+## Entrega e referências
+
+- [Roteiro completo](docs/ROTEIRO_DEMONSTRACAO.md): distribuição → grelha offline → correção → preço → emissão → explicação → ajuste → isolamento.
+- [Decisões](DECISOES.md): síntese de arquitetura, regras e limites.
+- [Progresso e validação](docs/progresso.md), [fases 8 e 9](docs/fases-8-9.md).
+- `ecras/`: cinco referências visuais; `docs/enunciado.pdf`: enunciado original.
+- Os documentos de desenvolvimento estão preservados, incluindo a decisão inicial em `docs/historico/`.
+
+Não inclui autenticação real, certificação fiscal, AT/SAF-T/IVA, integrações ERP, deploy ou CI. A pasta local `fonsat/` é o projeto anterior de referência e não integra a implementação.
