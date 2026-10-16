@@ -621,3 +621,8 @@ h3 {
 .operations th, .operations td { padding: 10px; text-align: left; border-bottom: 1px solid var(--line); }
 .operations td small { display: block; }
 @media(max-width: 700px) { .operations { padding: 14px; } .operation-form label { width: 100%; } }
+
+.operations .primary { background: var(--accent); color: white; border-color: var(--accent); }
+.worker-clock .clock-button { display: block; width: 100%; max-width: 430px; padding: 22px; margin-top: 20px; border-radius: 12px; font-size: 18px; }
+.pending-alert { color: #a1263e; }
+.billing-problem { padding: 12px; margin: 12px 0; border-left: 3px solid var(--accent); background: #fff6f8; }
