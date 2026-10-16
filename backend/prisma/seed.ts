@@ -1,46 +1,47 @@
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, UserRole } from '../src/generated/prisma/client';
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient, UserRole } from "../src/generated/prisma/client";
+import { anchoredDemoSite, anchoredDemoTrade, completeDemo } from "./demo-data";
 const connectionString = process.env.ADMIN_DATABASE_URL;
 if (!connectionString)
   throw new Error(
-    'ADMIN_DATABASE_URL é obrigatório para os dados de demonstração.',
+    "ADMIN_DATABASE_URL é obrigatório para os dados de demonstração.",
   );
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 async function seed() {
   await db.$transaction(async (tx) => {
     const examples = [
       {
-        name: 'FONSAT',
-        color: '#ec405c',
+        name: "FONSAT",
+        color: "#ec405c",
         names: [
-          'João Silva',
-          'Carlos Mendes',
-          'Sofia Ramos',
-          'Mota Obras',
-          'Rita Santos',
-          'Teixeira Construções',
+          "João Silva",
+          "Carlos Mendes",
+          "Sofia Ramos",
+          "Mota Obras",
+          "Rita Santos",
+          "Teixeira Construções",
         ],
       },
       {
-        name: 'Construções Horizonte',
-        color: '#138a96',
+        name: "Construções Horizonte",
+        color: "#138a96",
         names: [
-          'André Costa',
-          'Helena Sousa',
-          'Ana Martins',
-          'Lusovia Engenharia',
-          'Pedro Faria',
-          'Obras do Norte',
+          "André Costa",
+          "Helena Sousa",
+          "Ana Martins",
+          "Lusovia Engenharia",
+          "Pedro Faria",
+          "Obras do Norte",
         ],
       },
     ];
     const roles: UserRole[] = [
-      'worker',
-      'foreman',
-      'admin',
-      'client',
-      'foreman',
-      'client',
+      "worker",
+      "foreman",
+      "admin",
+      "client",
+      "foreman",
+      "client",
     ];
     for (const example of examples) {
       const company = await tx.company.upsert({
@@ -64,16 +65,26 @@ async function seed() {
           }),
         );
       }
-      const trade = await tx.trade.upsert({
-        where: { companyId_name: { companyId: company.id, name: 'Pedreiro' } },
-        update: {},
-        create: { companyId: company.id, name: 'Pedreiro' },
+      const existingWorker = await tx.worker.findUnique({
+        where: { userId: users[0].id },
+        include: { trade: true },
       });
-      await tx.trade.upsert({
-        where: { companyId_name: { companyId: company.id, name: 'Pintor' } },
-        update: {},
-        create: { companyId: company.id, name: 'Pintor' },
-      });
+      const trade =
+        (await anchoredDemoTrade(tx, company.id, 0)) ??
+        existingWorker?.trade ??
+        (await tx.trade.upsert({
+          where: {
+            companyId_name: { companyId: company.id, name: "Pedreiro" },
+          },
+          update: {},
+          create: { companyId: company.id, name: "Pedreiro" },
+        }));
+      (await anchoredDemoTrade(tx, company.id, 1)) ??
+        (await tx.trade.upsert({
+          where: { companyId_name: { companyId: company.id, name: "Pintor" } },
+          update: {},
+          create: { companyId: company.id, name: "Pintor" },
+        }));
       if (!(await tx.worker.findUnique({ where: { userId: users[0].id } })))
         await tx.worker.upsert({
           where: {
@@ -107,21 +118,28 @@ async function seed() {
             where: { id: clients[i].id },
             data: { userId: [users[3], users[5]][i].id },
           });
+      const demoSites = [];
       for (const [name, foreman] of [
-        ['Edifício Aurora', users[1]],
-        ['Armazém Norte', users[4]],
+        ["Edifício Aurora", users[1]],
+        ["Armazém Norte", users[4]],
       ] as const) {
-        const site = await tx.site.upsert({
-          where: { companyId_name: { companyId: company.id, name } },
-          update: {},
-          create: { companyId: company.id, name },
-        });
+        const site =
+          (await anchoredDemoSite(
+            tx,
+            company.id,
+            name === "Edifício Aurora" ? 0 : 1,
+          )) ??
+          (await tx.site.upsert({
+            where: { companyId_name: { companyId: company.id, name } },
+            update: {},
+            create: { companyId: company.id, name },
+          }));
         if (!site.clientId)
           await tx.site.update({
             where: { id: site.id },
-            data: { clientId: clients[name === 'Edifício Aurora' ? 0 : 1].id },
+            data: { clientId: clients[name === "Edifício Aurora" ? 0 : 1].id },
           });
-        const startsOn = new Date('2026-01-01T00:00:00Z');
+        const startsOn = new Date("2026-01-01T00:00:00Z");
         await tx.siteResponsibility.upsert({
           where: {
             companyId_siteId_userId_startsOn: {
@@ -139,7 +157,11 @@ async function seed() {
             startsOn,
           },
         });
+        demoSites.push(
+          await tx.site.findUniqueOrThrow({ where: { id: site.id } }),
+        );
       }
+      await completeDemo(tx, company, users, demoSites);
     }
   });
 }
