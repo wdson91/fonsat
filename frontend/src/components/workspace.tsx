@@ -12,7 +12,9 @@ import {
   type Site,
 } from "../lib/api";
 
+import { WorkerClock } from "./worker-clock";
 import { Operations } from "./operations";
+import { InvoicesPanel } from "./invoices";
 
 const STORAGE_KEY = "fonsat.userId";
 export const ROLE_LABEL: Record<Role, string> = {
@@ -414,24 +416,11 @@ function Dashboard({
                 </div>
               )}
             </section>
-          ) : (
-            <section className="empty-state">
-              <span className="empty-icon" aria-hidden="true">
-                {me.role === "worker" ? "◷" : "▤"}
-              </span>
-              <h2>
-                {me.role === "worker"
-                  ? "O seu espaço de trabalho"
-                  : "Os seus documentos, num só lugar"}
-              </h2>
-              <p>
-                {me.role === "worker"
-                  ? "O registo de ponto ainda não está disponível."
-                  : "A consulta de faturas ainda não está disponível."}
-              </p>
-            </section>
-          )}
+          ) : me.role === "worker" ? (
+            <WorkerClock key={me.id} me={me} />
+          ) : null}
           {staff && <Operations key={me.id} me={me} />}
+          {(me.role === "admin" || me.role === "client") && <InvoicesPanel key={me.id} userId={me.id} role={me.role} />}
           <footer className="dashboard-footer">
             <span>FONSAT · Gestão de equipas</span>
             <button className="quiet" onClick={() => onSelect(null)}>
