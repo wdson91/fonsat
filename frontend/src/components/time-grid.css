@@ -1,0 +1,371 @@
+.time-grid {
+  color: #173456;
+  margin-top: 1.5rem;
+}
+.time-grid-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.time-grid-toolbar h3 {
+  margin: 0 0 0.25rem;
+}
+.time-grid-toolbar p,
+.time-grid-note {
+  font-size: 0.8rem;
+  color: #68778b;
+}
+.week-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid #e0e3e9;
+  background: white;
+  border-radius: 8px;
+}
+.week-picker button {
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  padding: 0.25rem 0.75rem;
+  color: inherit;
+}
+.week-picker span {
+  font-size: 0.85rem;
+}
+.time-day {
+  border: 1px solid #dfe2e8;
+  border-bottom: 0;
+  background: white;
+}
+.time-day:nth-last-of-type(1) {
+  border-bottom: 1px solid #dfe2e8;
+}
+.time-day-today {
+  background: #fdf8ef;
+}
+.time-day-heading {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 1.4rem;
+  min-height: 72px;
+  background: #f8f9fb;
+}
+.time-day-today .time-day-heading {
+  background: #fdf8ef;
+}
+.time-day-date {
+  display: flex;
+  flex-direction: column;
+  padding-right: 1.5rem;
+  width: 100px;
+  flex-shrink: 0;
+  border-right: 1px solid #dfe2e8;
+}
+.time-day-date strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.time-day-date > span {
+  font-size: 0.73rem;
+  color: #64738b;
+}
+.day-work-total,
+.day-break-total {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.day-work-total > span,
+.day-break-total > span {
+  margin-right: 0.5rem;
+  color: #6b7386;
+}
+.day-break-total {
+  margin-left: auto;
+}
+.time-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.time-grid-table th:first-child {
+  width: 52%;
+}
+.time-grid-table th {
+  padding: 0.7rem 1.4rem;
+  text-align: left;
+  border-top: 1px solid #e0e3e9;
+  border-bottom: 1px solid #e0e3e9;
+  font-size: 0.73rem;
+  font-weight: 400;
+}
+.time-grid-table td {
+  padding: 0.85rem 1.4rem;
+  border: 0;
+  vertical-align: top;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.time-box {
+  display: inline-block;
+  min-width: 76px;
+  padding: 0.6rem;
+  text-align: center;
+  border: 2px solid #e0e2e8;
+  border-radius: 8px;
+  color: #173456;
+  background: #fff;
+  white-space: nowrap;
+}
+.time-box-incomplete { background: #fff1f3; color: #a1263e; border-color: #efb8c3; }
+.period-history {
+  border: 1px solid #e0e2e8;
+  border-radius: 50%;
+  background: white;
+  color: #8b93a4;
+  width: 29px;
+  height: 29px;
+  flex-shrink: 0;
+}
+.period-category,
+.period-location {
+  display: inline-block;
+  border-radius: 7px;
+  padding: 0.13rem 0.45rem;
+  background: #e9e9ed;
+  color: #28304d;
+  font-size: 0.8rem;
+}
+.period-category-break {
+  background: #d8edcf;
+  color: #345344;
+}
+.period-pending {
+  color: #805d1f;
+  background: #fff0cb;
+  border-radius: 12px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+}
+.time-grid-table td small {
+  display: block;
+  color: #805d1f;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+}
+.add-period-row {
+  padding: 0.6rem 1.4rem 1rem;
+}
+.add-period {
+  border: 2px solid #dfe2e8;
+  border-radius: 20px;
+  background: white;
+  padding: 0.15rem 0.8rem;
+  color: #36516e;
+  font-size: 0.85rem;
+}
+.add-period > span {
+  color: #939bad;
+  font-size: 1.1rem;
+}
+.period-version {
+  font-size: 0.75rem;
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  background: #f2f6f9;
+  border-radius: 6px;
+}
+.time-grid-note {
+  margin-top: 0.8rem;
+}
+.period-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  width: min(350px, calc(100vw - 28px));
+  border: 0;
+  border-radius: 16px;
+  color: #25273f;
+  box-shadow: 0 12px 40px #1a25452a;
+}
+.period-dialog::backdrop {
+  background: #1a25451a;
+}
+.period-dialog form {
+  padding: 1.6rem;
+}
+.period-dialog h4 {
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+.period-dialog h4 span {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #72788b;
+  margin-top: 0.25rem;
+}
+.activity-picker {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+.activity-picker button {
+  border: 2px solid #b8b9c4;
+  background: white;
+  border-radius: 9px;
+  padding: 0.55rem 1rem;
+  color: #55566b;
+  font-weight: 600;
+}
+.activity-picker button[aria-pressed="true"] {
+  color: #009eaa;
+  border-color: #00a7b5;
+  background: #e7f8fa;
+}
+.period-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.period-inputs input {
+  width: 112px;
+  max-width: 100%;
+  border: 2px solid #dedfe6;
+  border-radius: 8px;
+  padding: 0.6rem;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+.period-dialog .next-day {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  font-size: 0.8rem;
+}
+.period-dialog .next-day input {
+  width: 16px;
+  height: 16px;
+}
+.period-site {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  margin: 1rem 0;
+}
+.period-site select {
+  width: 100%;
+  padding: 0.65rem;
+  border: 2px solid #dedfe6;
+  border-radius: 7px;
+  color: inherit;
+  background: white;
+  font: inherit;
+}
+.period-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid #e1e2e7;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+.period-dialog footer button {
+  padding: 0.2rem 0.9rem;
+  border-radius: 20px;
+  border: 2px solid #e1e2e7;
+  color: #55566b;
+  background: white;
+}
+.period-dialog footer .apply-period {
+  border-color: #ff9bac;
+  color: #ed6683;
+}
+.period-hint {
+  color: #737888;
+  font-size: 0.75rem;
+}
+.offline-banner {
+  border: 1px solid #e3c58b;
+  background: #fff3dc;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+.offline-ready {
+  color: #367c69;
+  font-size: 0.8rem;
+  margin-bottom: 0.6rem;
+}
+.worker-clock .sync-now { margin: .6rem 0; padding: .55rem .85rem; border: 1px solid #dfe2e8; border-radius: 8px; background: #fff; color: #36516e; }
+.worker-clock .quick-clock {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fb;
+  border-radius: 10px;
+}
+.worker-clock .quick-clock .clock-button {
+  display: inline-block;
+  width: auto;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  margin: 0.7rem 0;
+}
+.quick-clock h3 {
+  margin-top: 0;
+}
+@media (max-width: 700px) {
+  .time-day-heading {
+    padding: 0.8rem;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .time-day-date {
+    width: 90px;
+    padding-right: 0.5rem;
+  }
+  .day-work-total,
+  .day-break-total {
+    font-size: 0.75rem;
+  }
+  .day-break-total {
+    margin-left: 0;
+  }
+  .time-grid-table,
+  .time-grid-table tbody {
+    display: block;
+  }
+  .time-grid-table thead {
+    display: none;
+  }
+  .time-grid-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0.7rem;
+    gap: 0.5rem;
+    border-top: 1px solid #e1e4e9;
+  }
+  .time-grid-table td {
+    padding: 0;
+  }
+  .time-grid-table td:first-child {
+    grid-column: 1 / -1;
+  }
+  .add-period-row {
+    padding: 0.6rem 0.8rem 1rem;
+  }
+}
