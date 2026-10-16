@@ -1,3 +1,4 @@
+import { lockCompanyFinance } from '../invoices/invoice-source';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { TenantService } from '../database/tenant.service';
 import { ScopeService } from '../common/scope.service';
@@ -20,11 +21,14 @@ export class CatalogService {
     if (input.active !== undefined && typeof input.active !== 'boolean') throw new BadRequestException('Estado inválido.');
     const active = input.active === undefined ? true : input.active as boolean;
     return this.tenant.inCompany(user.company_id, async tx => {
+      await lockCompanyFinance(tx,user.company_id);
       const base = { name, active };
       const companyId = user.company_id;
       if (kind === 'trades') return id ? tx.trade.update({ where: { id }, data: base }) : tx.trade.create({ data: { ...base, companyId } });
       if (kind === 'clients') {
-        const data = { ...base, taxId: typeof input.taxId === 'string' ? input.taxId.trim() : '' };
+        const userId = input.userId == null || input.userId === '' ? null : integer(input.userId);
+        if (userId && !await tx.demoUser.findFirst({ where: { id: userId, role: 'client' } })) throw new BadRequestException('Selecione um utilizador cliente da empresa.');
+        const data = { ...base, userId, taxId: typeof input.taxId === 'string' ? input.taxId.trim() : '' };
         return id ? tx.client.update({ where: { id }, data }) : tx.client.create({ data: { ...data, companyId } });
       }
       if (kind === 'workers') {

@@ -1,3 +1,4 @@
+import { lockCompanyFinance } from '../invoices/invoice-source';
 import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { TenantService } from '../database/tenant.service';
 import { ScopeService } from '../common/scope.service';
@@ -35,6 +36,7 @@ export class AttendanceService {
     if (input.kind !== 'in' && input.kind !== 'out') throw new BadRequestException('Tipo de marcação inválido.');
     const kind = input.kind;
     return this.tenant.inCompany(user.company_id, async tx => {
+      await lockCompanyFinance(tx,user.company_id);
       const worker = await tx.worker.findUnique({ where: { userId: user.id } });
       if (!worker) throw new NotFoundException('Trabalhador não encontrado.');
       const existing = await tx.clockEvent.findUnique({ where: { id }, include: { entry: true } });
@@ -70,10 +72,12 @@ export class AttendanceService {
       const ids = user.role === 'foreman' ? await this.scope.siteIds(tx, user) : null;
       const entries = await tx.workEntry.findMany({ where: worker ? { workerId: worker.id } : {}, include: { worker: true, versions: { orderBy: { number: 'desc' }, include: { site: true, trade: true, author: { select: { id: true, name: true } } } }, events: { orderBy: { occurredAt: 'asc' } } }, orderBy: { createdAt: 'desc' } });
       const allocations = await tx.allocation.findMany();
+      const rates = await tx.rate.findMany();
       return entries.filter(e => !ids || ids.includes(e.versions[0]?.siteId)).map(e => {
         const current = e.versions[0];
         const allocation = allocations.find(a => a.workerId === e.workerId && +a.day === +current.workedOn);
         const alerts: string[] = [];
+        if (!rates.some(r=>r.clientId===current.site.clientId&&r.tradeId===current.tradeId&&r.startsOn<=current.workedOn&&(!r.endsOn||r.endsOn>=current.workedOn))) alerts.push('Sem preço para o cliente e ofício nesta data.');
         if (current.minutes === null) alerts.push('Registo incompleto: falta entrada ou saída.');
         if (!allocation || allocation.siteId !== current.siteId) alerts.push('Fora da distribuição.');
         if (e.events.some(ev => Math.abs(+ev.receivedAt - +ev.occurredAt) > 86400000)) alerts.push('Marcação recebida com atraso ou relógio desviado.');
