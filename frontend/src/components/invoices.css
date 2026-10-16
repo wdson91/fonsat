@@ -2,6 +2,8 @@
   margin-top: 2rem;
 }
 .invoice-form {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: end;
@@ -9,12 +11,16 @@
   margin: 1.5rem 0;
 }
 .invoice-form label {
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   gap: 0.45rem;
   font-size: 0.9rem;
 }
 .invoice-form select,
 .invoice-form input {
+  width: 100%;
+  min-width: 0;
   min-height: 2.75rem;
   max-width: 100%;
   padding: 0.6rem;
