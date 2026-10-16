@@ -17,6 +17,10 @@ model Company {
   name String @unique
   brandColor String @default("#ec405c") @map("brand_color")
   timeZone String @default("Europe/Lisbon") @map("time_zone")
+  entries WorkEntry[]
+  events ClockEvent[]
+  versions EntryVersion[]
+  audit AuditEvent[]
   trades Trade[]
   clients Client[]
   workers Worker[]
@@ -31,6 +35,8 @@ model DemoUser {
   companyId Int @map("company_id")
   name String
   role UserRole
+  authoredVersions EntryVersion[]
+  audit AuditEvent[]
   worker Worker?
   allocations Allocation[]
   company Company @relation(fields: [companyId], references: [id])
@@ -40,6 +46,8 @@ model DemoUser {
   @@map("demo_users")
 }
 model Site {
+  events ClockEvent[]
+  versions EntryVersion[]
   clientId Int? @map("client_id")
   location String @default("")
   active Boolean @default(true)
@@ -69,6 +77,7 @@ model SiteResponsibility {
 }
 
 model Trade {
+  versions EntryVersion[]
   id Int @id @default(autoincrement())
   companyId Int @map("company_id")
   name String
@@ -104,6 +113,7 @@ model Worker {
   @@unique([companyId, userId])
   user DemoUser? @relation(fields: [companyId, userId], references: [companyId, id])
   allocations Allocation[]
+  entries WorkEntry[]
   @@unique([companyId, id])
   @@unique([companyId, name])
   @@map("workers")
@@ -125,4 +135,69 @@ model Allocation {
   @@unique([companyId, id])
   @@unique([companyId, workerId, day])
   @@map("allocations")
+}
+
+model WorkEntry {
+  id String @id @db.Uuid
+  companyId Int @map("company_id")
+  workerId Int @map("worker_id")
+  currentVersion Int @default(0) @map("current_version")
+  createdAt DateTime @default(now()) @map("created_at")
+  company Company @relation(fields: [companyId], references: [id])
+  worker Worker @relation(fields: [companyId, workerId], references: [companyId, id])
+  events ClockEvent[]
+  versions EntryVersion[]
+  @@unique([companyId, id])
+  @@map("work_entries")
+}
+model ClockEvent {
+  id String @id @db.Uuid
+  companyId Int @map("company_id")
+  entryId String @db.Uuid @map("entry_id")
+  siteId Int @map("site_id")
+  kind String
+  occurredAt DateTime @map("occurred_at")
+  receivedAt DateTime @default(now()) @map("received_at")
+  company Company @relation(fields: [companyId], references: [id])
+  entry WorkEntry @relation(fields: [companyId, entryId], references: [companyId, id])
+  site Site @relation(fields: [companyId, siteId], references: [companyId, id])
+  @@unique([companyId, id])
+  @@index([companyId, entryId])
+  @@map("clock_events")
+}
+model EntryVersion {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  entryId String @db.Uuid @map("entry_id")
+  number Int
+  siteId Int @map("site_id")
+  tradeId Int @map("trade_id")
+  startAt DateTime? @map("start_at")
+  endAt DateTime? @map("end_at")
+  workedOn DateTime @db.Date @map("worked_on")
+  minutes Int?
+  source String
+  reason String?
+  authorId Int @map("author_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  company Company @relation(fields: [companyId], references: [id])
+  entry WorkEntry @relation(fields: [companyId, entryId], references: [companyId, id])
+  site Site @relation(fields: [companyId, siteId], references: [companyId, id])
+  trade Trade @relation(fields: [companyId, tradeId], references: [companyId, id])
+  author DemoUser @relation(fields: [companyId, authorId], references: [companyId, id])
+  @@unique([companyId, id])
+  @@unique([companyId, entryId, number])
+  @@map("entry_versions")
+}
+model AuditEvent {
+  id Int @id @default(autoincrement())
+  companyId Int @map("company_id")
+  authorId Int @map("author_id")
+  action String
+  entityId String @map("entity_id")
+  payload Json
+  createdAt DateTime @default(now()) @map("created_at")
+  company Company @relation(fields: [companyId], references: [id])
+  author DemoUser @relation(fields: [companyId, authorId], references: [companyId, id])
+  @@map("audit_events")
 }
