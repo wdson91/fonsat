@@ -18,7 +18,9 @@
     "db:generate": "npm run db:generate --workspace backend",
     "db:migrate": "npm run db:migrate --workspace backend",
     "db:seed": "npm run db:seed --workspace backend",
-    "test:e2e": "npm run test:e2e --workspace frontend"
+    "test:e2e": "npm run test:e2e --workspace frontend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "typescript": "5.9.3",

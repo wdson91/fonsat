@@ -7,11 +7,15 @@ export class IdentityService {
   constructor(private readonly prisma: PrismaService) {}
 
   listDemoUsers() {
-    return this.prisma.$queryRaw<DemoUser[]>`SELECT * FROM public.app_demo_users()`;
+    return this.prisma.$queryRaw<
+      DemoUser[]
+    >`SELECT * FROM public.app_demo_users()`;
   }
 
   async resolveUser(id: number): Promise<CurrentUser | null> {
-    const users = await this.prisma.$queryRaw<CurrentUser[]>`SELECT * FROM public.app_resolve_user(${id}::integer)`;
+    const users = await this.prisma.$queryRaw<
+      CurrentUser[]
+    >`SELECT * FROM public.app_resolve_user(${id}::integer)`;
     return users[0] ?? null;
   }
 }

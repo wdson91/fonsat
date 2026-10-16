@@ -1,7 +1,7 @@
-import { Global, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TenantService } from './tenant.service';
-import { PrismaService } from './prisma.service';
+import { Global, Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { TenantService } from "./tenant.service";
+import { PrismaService } from "./prisma.service";
 
 @Global()
 @Module({
@@ -10,4 +10,3 @@ import { PrismaService } from './prisma.service';
   exports: [PrismaService, TenantService],
 })
 export class PrismaModule {}
-

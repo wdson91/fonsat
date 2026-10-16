@@ -4,12 +4,23 @@ import type { CurrentUser } from "../lib/api";
 import { addDays, companyDay, monday } from "../lib/operations";
 import {
   durationLabel,
+  companyDayAt,
   periodEvents,
   timeInZone,
+  wallTime,
   type PeriodRow,
 } from "../lib/time-periods";
 import type { QueueEvent } from "../lib/queue-sync";
 import "./time-grid.css";
+
+function confirmExtraTime(minutes: number) {
+  return (
+    minutes <= 480 ||
+    window.confirm(
+      `O dia terá ${durationLabel(minutes)} de trabalho, acima das 8 horas (${durationLabel(minutes - 480)} extra). Confirmou as pausas? Para descontar uma pausa, cancele e registe o trabalho antes e depois dela. Guardar mesmo assim?`,
+    )
+  );
+}
 
 export function TimeGrid({
   me,
@@ -17,12 +28,18 @@ export function TimeGrid({
   sites,
   onAdd,
   initialWeek,
+  onComplete,
+  allocations = [],
+  suggestedSiteId,
 }: {
   me: CurrentUser;
   rows: PeriodRow[];
   sites: { id: number; name: string; active: boolean }[];
   onAdd: (events: [QueueEvent, QueueEvent]) => Promise<void>;
+  allocations?: { day: string; siteId: number }[];
+  suggestedSiteId?: number | null;
   initialWeek?: string;
+  onComplete?: (event: QueueEvent) => Promise<void>;
 }) {
   const [week, setWeek] = useState(
     initialWeek ?? monday(companyDay(me.time_zone)),
@@ -35,11 +52,23 @@ export function TimeGrid({
   const [nextDay, setNextDay] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const [closing, setClosing] = useState<PeriodRow | null>(null);
   const [history, setHistory] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null),
     opener = useRef<HTMLButtonElement | null>(null);
   const today = companyDay(me.time_zone);
-  const dayLabel = (instant: Date) => `${instant.getUTCDate()} ${new Intl.DateTimeFormat('pt-PT', { month: 'long' }).format(instant).slice(0, 3)}`;
+  function defaultSite(date: string) {
+    const assigned =
+      allocations.find((a) => a.day.slice(0, 10) === date)?.siteId ??
+      (date === today ? suggestedSiteId : null);
+    if (assigned && sites.some((site) => site.active && site.id === assigned))
+      return String(assigned);
+    return sites.filter((site) => site.active).length === 1
+      ? String(sites.find((site) => site.active)!.id)
+      : "";
+  }
+  const dayLabel = (instant: Date) =>
+    `${instant.getUTCDate()} ${new Intl.DateTimeFormat("pt-PT", { month: "long" }).format(instant).slice(0, 3)}`;
   useEffect(() => {
     if (!day || !dialog.current) return;
     if (typeof dialog.current.showModal === "function")
@@ -74,6 +103,18 @@ export function TimeGrid({
         throw new Error(
           "Já existe um período neste horário. Registe o trabalho antes e depois das pausas em períodos separados.",
         );
+      if (activity === "work") {
+        const minutes =
+          Math.floor(ending / 60000) - Math.floor(beginning / 60000);
+        const dayWork = rows
+          .filter(
+            (row) =>
+              row.day === (nextDay ? addDays(day, 1) : day) &&
+              row.activity === "work",
+          )
+          .reduce((sum, row) => sum + row.minutes, 0);
+        if (!confirmExtraTime(dayWork + minutes)) return;
+      }
       await onAdd(events);
       close();
     } catch (failure) {
@@ -136,9 +177,7 @@ export function TimeGrid({
             >
               <header className="time-day-heading">
                 <div className="time-day-date">
-                  <strong>
-                    {dayLabel(instant)}
-                  </strong>
+                  <strong>{dayLabel(instant)}</strong>
                   <span>
                     {new Intl.DateTimeFormat("pt-PT", {
                       weekday: "long",
@@ -148,6 +187,12 @@ export function TimeGrid({
                 <span className="day-work-total">
                   <span aria-hidden="true">◴</span> {durationLabel(working)} de
                   trabalho
+                  {working > 480 && (
+                    <strong className="pending-alert">
+                      {" "}
+                      · {durationLabel(working - 480)} extra (acima de 8h)
+                    </strong>
+                  )}
                 </span>
                 <span className="day-break-total">
                   <span aria-hidden="true">☕</span> {durationLabel(resting)} de
@@ -170,71 +215,112 @@ export function TimeGrid({
                     </tr>
                   </thead>
                   <tbody>
-                    {periods.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <div className="time-range">
-                            <time
-                              className="time-box"
-                              dateTime={row.startAt ?? undefined}
-                            >
-                              {row.startAt
-                                ? timeInZone(row.startAt, me.time_zone)
-                                : "—:—"}
-                            </time>
-                            <span>–</span>
-                            <time
-                              className={`time-box${!row.endAt && row.day < today ? ' time-box-incomplete' : ''}`}
-                              dateTime={row.endAt ?? undefined}
-                            >
-                              {row.endAt
-                                ? timeInZone(row.endAt, me.time_zone)
-                                : row.day < today ? 'Sem saída' : "Em curso"}
-                            </time>
-                            <button
-                              className="period-history"
-                              type="button"
-                              aria-label={`Histórico do período ${row.id}`}
-                              title="Ver versão do registo"
-                              onClick={() =>
-                                setHistory(history === row.id ? null : row.id)
-                              }
-                            >
-                              ↺
-                            </button>
-                          </div>
-                          {history === row.id && (
-                            <div className="period-version">
-                              <p>
-                                {row.version
-                                  ? `Versão ${row.version}`
-                                  : "Guardado neste dispositivo"}
-                                {row.reason ? ` · ${row.reason}` : ""}
-                              </p>
-                              <p>
-                                Para corrigir um registo, contacte o
-                                encarregado. O original fica preservado.
-                              </p>
+                    {periods.map((row) => {
+                      const spansDays =
+                        row.startAt &&
+                        row.endAt &&
+                        companyDayAt(row.startAt, me.time_zone) !==
+                          companyDayAt(row.endAt, me.time_zone);
+                      const dateLabel = (value: string) =>
+                        new Intl.DateTimeFormat("pt-PT", {
+                          timeZone: me.time_zone,
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        }).format(new Date(value));
+                      return (
+                        <tr key={row.id}>
+                          <td>
+                            <div className="time-range">
+                              <time
+                                className="time-box"
+                                dateTime={row.startAt ?? undefined}
+                              >
+                                {row.startAt
+                                  ? timeInZone(row.startAt, me.time_zone)
+                                  : "—:—"}
+                                {spansDays && (
+                                  <>
+                                    <br />
+                                    <span className="time-box-date">
+                                      {dateLabel(row.startAt!)}
+                                    </span>
+                                  </>
+                                )}
+                              </time>
+                              <span>–</span>
+                              <time
+                                className={`time-box${!row.endAt && row.day < today ? " time-box-incomplete" : ""}`}
+                                dateTime={row.endAt ?? undefined}
+                              >
+                                {row.endAt
+                                  ? timeInZone(row.endAt, me.time_zone)
+                                  : row.day < today
+                                    ? "Sem saída"
+                                    : "Em curso"}
+                                {spansDays && (
+                                  <>
+                                    <br />
+                                    <span className="time-box-date">
+                                      {dateLabel(row.endAt!)}
+                                    </span>
+                                  </>
+                                )}
+                              </time>
+                              {row.startAt && !row.endAt && onComplete && (
+                                <button
+                                  type="button"
+                                  className="add-period"
+                                  onClick={() => setClosing(row)}
+                                >
+                                  Concluir período
+                                </button>
+                              )}
+                              <button
+                                className="period-history"
+                                type="button"
+                                aria-label={`Histórico do período ${row.id}`}
+                                title="Ver versão do registo"
+                                onClick={() =>
+                                  setHistory(history === row.id ? null : row.id)
+                                }
+                              >
+                                ↺
+                              </button>
                             </div>
-                          )}
-                        </td>
-                        <td>
-                          <span
-                            className={`period-category period-category-${row.activity}`}
-                          >
-                            {row.activity === "work"
-                              ? "▣ Trabalho"
-                              : "☕ Pausa"}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="period-location">
-                            ▥ {row.siteName}
-                          </span>
-                          {row.pending && <small>Por sincronizar</small>}
-                        </td>
-                      </tr>
-                    ))}
+                            {history === row.id && (
+                              <div className="period-version">
+                                <p>
+                                  {row.version
+                                    ? `Versão ${row.version}`
+                                    : "Guardado neste dispositivo"}
+                                  {row.reason ? ` · ${row.reason}` : ""}
+                                </p>
+                                <p>
+                                  Para corrigir um registo, contacte o
+                                  encarregado. O original fica preservado.
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <span
+                              className={`period-category period-category-${row.activity}`}
+                            >
+                              {row.activity === "work"
+                                ? "▣ Trabalho"
+                                : "☕ Pausa"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="period-location">
+                              ▥ {row.siteName}
+                            </span>
+                            {row.pending && <small>Por sincronizar</small>}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -250,11 +336,7 @@ export function TimeGrid({
                     setEnd("");
                     setNextDay(false);
                     setActivity("work");
-                    setSiteId(
-                      sites.filter((site) => site.active).length === 1
-                        ? String(sites.find((site) => site.active)!.id)
-                        : "",
-                    );
+                    setSiteId(defaultSite(date));
                     setError("");
                     setDay(date);
                   }}
@@ -270,6 +352,15 @@ export function TimeGrid({
         As pausas ficam separadas do trabalho e não entram nas horas faturáveis.
         Os valores seguem a hora de {me.time_zone}.
       </p>
+      {closing && onComplete && (
+        <CompletePeriod
+          me={me}
+          row={closing}
+          rows={rows}
+          onComplete={onComplete}
+          onClose={() => setClosing(null)}
+        />
+      )}
       {day && (
         <dialog
           ref={dialog}
@@ -333,7 +424,13 @@ export function TimeGrid({
               <input
                 type="checkbox"
                 checked={nextDay}
-                onChange={(event) => setNextDay(event.target.checked)}
+                onChange={(event) => {
+                  setNextDay(event.target.checked);
+                  if (day)
+                    setSiteId(
+                      defaultSite(event.target.checked ? addDays(day, 1) : day),
+                    );
+                }}
               />
               Começa no dia seguinte (+1d)
             </label>
@@ -376,5 +473,139 @@ export function TimeGrid({
         </dialog>
       )}
     </section>
+  );
+}
+
+function CompletePeriod({
+  me,
+  row,
+  rows,
+  onComplete,
+  onClose,
+}: {
+  me: CurrentUser;
+  row: PeriodRow;
+  rows: PeriodRow[];
+  onComplete: (event: QueueEvent) => Promise<void>;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [day, setDay] = useState(row.day);
+  const [end, setEnd] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (typeof dialog.current?.showModal === "function")
+      dialog.current.showModal();
+    else dialog.current?.setAttribute("open", "");
+  }, []);
+  async function apply() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const occurredAt = wallTime(day, end, me.time_zone);
+      const beginning = Date.parse(row.startAt!),
+        ending = Date.parse(occurredAt);
+      if (ending <= beginning)
+        throw new Error("A saída tem de ser posterior à entrada.");
+      if (
+        rows.some(
+          (other) =>
+            other.id !== row.id &&
+            other.startAt &&
+            beginning < (other.endAt ? Date.parse(other.endAt) : Infinity) &&
+            ending > Date.parse(other.startAt),
+        )
+      )
+        throw new Error("Já existe outro período neste horário.");
+      if (row.activity === "work") {
+        const others = rows
+          .filter(
+            (other) =>
+              other.id !== row.id &&
+              other.day === row.day &&
+              other.activity === "work",
+          )
+          .reduce((sum, other) => sum + other.minutes, 0);
+        if (
+          !confirmExtraTime(
+            others + Math.floor(ending / 60000) - Math.floor(beginning / 60000),
+          )
+        )
+          return;
+      }
+      await onComplete({
+        id: crypto.randomUUID(),
+        shiftId: row.id,
+        siteId: row.siteId,
+        kind: row.activity === "break" ? "break_out" : "out",
+        occurredAt,
+        userId: me.id,
+        companyId: me.company_id,
+      });
+      onClose();
+    } catch (failure) {
+      setError((failure as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <dialog
+      ref={dialog}
+      className="period-dialog"
+      aria-label="Concluir período"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!busy) onClose();
+      }}
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void apply();
+        }}
+      >
+        <h4>Concluir período</h4>
+        <p>
+          {row.siteName} · {row.activity === "break" ? "Pausa" : "Trabalho"}
+        </p>
+        <p>
+          Entrada: {row.day} às {timeInZone(row.startAt!, me.time_zone)}
+        </p>
+        <label>
+          Dia de saída
+          <input
+            type="date"
+            required
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
+          />
+        </label>
+        <label>
+          Hora de saída
+          <input
+            type="time"
+            required
+            value={end}
+            onChange={(event) => setEnd(event.target.value)}
+          />
+        </label>
+        {error && (
+          <p role="alert" className="notice">
+            {error}
+          </p>
+        )}
+        <footer>
+          <button type="button" disabled={busy} onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="apply-period" disabled={busy}>
+            Aplicar
+          </button>
+        </footer>
+      </form>
+    </dialog>
   );
 }

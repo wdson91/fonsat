@@ -306,7 +306,9 @@ h3 {
   background: #f8e6eb;
   color: #bc344c;
 }
-.sidebar nav a.nav-active { color: #bc344c; }
+.sidebar nav a.nav-active {
+  color: #bc344c;
+}
 .nav-active > span {
   font-size: 20px;
 }
@@ -607,24 +609,141 @@ h3 {
   }
 }
 
-.operations { margin-top: 30px; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
-.operation-tabs, .operation-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 16px 0; }
-.operation-tabs button, .operation-form button, .record-list button, table button { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; background: #fafafa; color: inherit; }
-.operation-tabs button[aria-pressed="true"] { background: #fce9ee; border-color: #ec405c; }
-.operations label { display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
-.operations input, .operations select, .operations textarea { border: 1px solid var(--line); border-radius: 6px; padding: 9px; max-width: 100%; color: inherit; background: white; }
-.operations input[type="checkbox"] { width: 20px; }
-.operations button:disabled { opacity: .5; cursor: default; }
-.operations h2, .operations h3 { margin: 20px 0 12px; }
-.record-list { padding: 0; list-style: none; }
-.record-list li { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 12px 0; }
-.table-scroll { overflow-x: auto; }
-.operations table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.operations th, .operations td { padding: 10px; text-align: left; border-bottom: 1px solid var(--line); }
-.operations td small { display: block; }
-@media(max-width: 700px) { .operations { padding: 14px; } .operation-form label { width: 100%; } }
+.operations {
+  margin-top: 30px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  min-width: 0;
+}
+.operation-tabs,
+.operation-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0;
+}
+.operation-tabs button,
+.operation-form button,
+.record-list button,
+table button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  background: #fafafa;
+  color: inherit;
+}
+.operation-tabs button[aria-pressed="true"] {
+  background: #fce9ee;
+  border-color: #ec405c;
+}
+.operations label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 14px;
+}
+.operations input,
+.operations select,
+.operations textarea {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px;
+  max-width: 100%;
+  color: inherit;
+  background: white;
+}
+.operations input[type="checkbox"] {
+  width: 20px;
+}
+.operations button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.operations h2,
+.operations h3 {
+  margin: 20px 0 12px;
+}
+.record-list {
+  padding: 0;
+  list-style: none;
+}
+.record-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.operations table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.operations th,
+.operations td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.operations .planning-worker > span,
+.operations .planning-worker > small {
+  display: block;
+}
+.operations .planning-worker > small {
+  margin-top: 0.35rem;
+  font-weight: 400;
+  color: #526177;
+  line-height: 1.4;
+}
+.operations .planning-outside-trade {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #d6a13d;
+  border-radius: 6px;
+  background: #fff5d9;
+  color: #704700;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.operations td small {
+  display: block;
+}
+@media (max-width: 700px) {
+  .operations {
+    padding: 14px;
+  }
+  .operation-form label {
+    width: 100%;
+  }
+}
 
-.operations .primary { background: var(--accent); color: white; border-color: var(--accent); }
-.worker-clock .clock-button { display: block; width: 100%; max-width: 430px; padding: 22px; margin-top: 20px; border-radius: 12px; font-size: 18px; }
-.pending-alert { color: #a1263e; }
-.billing-problem { padding: 12px; margin: 12px 0; border-left: 3px solid var(--accent); background: #fff6f8; }
+.operations .primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.worker-clock .clock-button {
+  display: block;
+  width: 100%;
+  max-width: 430px;
+  padding: 22px;
+  margin-top: 20px;
+  border-radius: 12px;
+  font-size: 18px;
+}
+.pending-alert {
+  color: #a1263e;
+}
+.billing-problem {
+  padding: 12px;
+  margin: 12px 0;
+  border-left: 3px solid var(--accent);
+  background: #fff6f8;
+}

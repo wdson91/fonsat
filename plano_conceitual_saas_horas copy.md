@@ -24,41 +24,41 @@ Cada empresa de alocação (o **tenant**) tem um ambiente próprio e isolado, on
 
 ## 2. Registo de decisões (resultado da entrevista)
 
-| # | Tema | Decisão |
-|---|------|---------|
-| 1 | Objetivo | SaaS próprio; a FONSAT é o piloto; o MVP já nasce multiempresa |
-| 2 | Fronteira do tenant | **Isolamento total**: contas, colaboradores, clientes e obras pertencem a um único tenant |
-| 3 | Login | Username interno, único **dentro do tenant** (ex.: `joao.silva` @ `fonsat`), sem domínio de email real |
-| 4 | Quem lança horas | Os dois modos (colaborador ou encarregado), configurável por tenant; fica sempre registado *de quem* são as horas e *quem lançou* |
-| 5 | Perfis | 4 perfis fixos no MVP (Admin, Gestor, Encarregado, Colaborador), guardados como dados (Perfil → Permissões), com âmbito por tenant ou por obra |
-| 6 | Acesso do cliente | Não existe no MVP; o modelo já o suporta (perfil "Cliente" com âmbito na empresa cliente) |
-| 7 | Preços | Tabela de preços com vigência, por Função × Tipo de hora, resolvida em cascata (colaborador → função → obra → cliente) |
-| 8 | Classificação | **Automática no MVP** |
-| 9 | Regras | Só **limite diário** e **janela noturna**, ao nível do tenant. Sem feriados |
-| 10 | Custo / margem | **Fora do produto**; o foco é só o valor faturado |
-| 11 | Aprovação | Por registo, com ações em lote; estados com histórico |
-| 12 | Correções | Antes do fecho: o registo pode ser reaberto, com motivo. Depois do fecho: **imutável**; corrige-se com um *ajuste* no período seguinte |
-| 13 | Saída | Fecho por cliente + período; apuramento **o mais simples possível** (modal / PDF simples); sem emissão fiscal |
-| 14 | Isolamento no banco | Banco partilhado com `tenant_id` obrigatório e isolamento imposto **pelo próprio banco** |
-| 15 | Onboarding | **Self-service**: a empresa regista-se e o ambiente é criado automaticamente |
-| 16 | Monetização | Gratuito, sem planos nem limites por agora |
-| 17 | Auditoria / RGPD | Nada com histórico é apagado (só arquivado); auditoria genérica; dados pessoais anonimizáveis |
-| 18 | Função | **Uma função fixa por colaborador** (copiada para o registo no momento do cálculo) |
-| 19 | Várias obras no mesmo dia | **Proibido no MVP**: um colaborador só trabalha numa obra por dia |
-| 20 | Detalhe das regras | Só limite diário; turnos podem atravessar a meia-noite e contam para o dia de início; janela noturna configurável |
+| #   | Tema                      | Decisão                                                                                                                                        |
+| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Objetivo                  | SaaS próprio; a FONSAT é o piloto; o MVP já nasce multiempresa                                                                                 |
+| 2   | Fronteira do tenant       | **Isolamento total**: contas, colaboradores, clientes e obras pertencem a um único tenant                                                      |
+| 3   | Login                     | Username interno, único **dentro do tenant** (ex.: `joao.silva` @ `fonsat`), sem domínio de email real                                         |
+| 4   | Quem lança horas          | Os dois modos (colaborador ou encarregado), configurável por tenant; fica sempre registado _de quem_ são as horas e _quem lançou_              |
+| 5   | Perfis                    | 4 perfis fixos no MVP (Admin, Gestor, Encarregado, Colaborador), guardados como dados (Perfil → Permissões), com âmbito por tenant ou por obra |
+| 6   | Acesso do cliente         | Não existe no MVP; o modelo já o suporta (perfil "Cliente" com âmbito na empresa cliente)                                                      |
+| 7   | Preços                    | Tabela de preços com vigência, por Função × Tipo de hora, resolvida em cascata (colaborador → função → obra → cliente)                         |
+| 8   | Classificação             | **Automática no MVP**                                                                                                                          |
+| 9   | Regras                    | Só **limite diário** e **janela noturna**, ao nível do tenant. Sem feriados                                                                    |
+| 10  | Custo / margem            | **Fora do produto**; o foco é só o valor faturado                                                                                              |
+| 11  | Aprovação                 | Por registo, com ações em lote; estados com histórico                                                                                          |
+| 12  | Correções                 | Antes do fecho: o registo pode ser reaberto, com motivo. Depois do fecho: **imutável**; corrige-se com um _ajuste_ no período seguinte         |
+| 13  | Saída                     | Fecho por cliente + período; apuramento **o mais simples possível** (modal / PDF simples); sem emissão fiscal                                  |
+| 14  | Isolamento no banco       | Banco partilhado com `tenant_id` obrigatório e isolamento imposto **pelo próprio banco**                                                       |
+| 15  | Onboarding                | **Self-service**: a empresa regista-se e o ambiente é criado automaticamente                                                                   |
+| 16  | Monetização               | Gratuito, sem planos nem limites por agora                                                                                                     |
+| 17  | Auditoria / RGPD          | Nada com histórico é apagado (só arquivado); auditoria genérica; dados pessoais anonimizáveis                                                  |
+| 18  | Função                    | **Uma função fixa por colaborador** (copiada para o registo no momento do cálculo)                                                             |
+| 19  | Várias obras no mesmo dia | **Proibido no MVP**: um colaborador só trabalha numa obra por dia                                                                              |
+| 20  | Detalhe das regras        | Só limite diário; turnos podem atravessar a meia-noite e contam para o dia de início; janela noturna configurável                              |
 
 ---
 
 ## 3. Atores
 
-| Ator | Camada | O que faz |
-|------|--------|-----------|
-| **Super-admin** (você) | Plataforma | Vê e suspende tenants; dá suporte (com acesso "entrar como" sempre auditado) |
-| **Admin do tenant** | Tenant | Gere clientes, obras, colaboradores, funções, preços, regras, contas e configurações |
-| **Gestor / Escritório** | Tenant | Reabre registos, fecha períodos e consulta apuramentos |
-| **Encarregado** | Tenant (âmbito: obras) | Lança horas da equipa e aprova/rejeita registos das suas obras |
-| **Colaborador** | Tenant (âmbito: próprio) | Lança e consulta as suas horas (se o tenant permitir) |
-| *Cliente (futuro)* | Tenant (âmbito: empresa cliente) | Consulta/valida as horas das suas obras |
+| Ator                    | Camada                           | O que faz                                                                            |
+| ----------------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
+| **Super-admin** (você)  | Plataforma                       | Vê e suspende tenants; dá suporte (com acesso "entrar como" sempre auditado)         |
+| **Admin do tenant**     | Tenant                           | Gere clientes, obras, colaboradores, funções, preços, regras, contas e configurações |
+| **Gestor / Escritório** | Tenant                           | Reabre registos, fecha períodos e consulta apuramentos                               |
+| **Encarregado**         | Tenant (âmbito: obras)           | Lança horas da equipa e aprova/rejeita registos das suas obras                       |
+| **Colaborador**         | Tenant (âmbito: próprio)         | Lança e consulta as suas horas (se o tenant permitir)                                |
+| _Cliente (futuro)_      | Tenant (âmbito: empresa cliente) | Consulta/valida as horas das suas obras                                              |
 
 > [!NOTE]
 > **Colaborador ≠ Conta de acesso.** O colaborador é a pessoa alocada e faturada, e existe sempre. A conta é opcional e serve apenas para entrar no sistema. Um colaborador pode ter horas faturadas sem nunca fazer login (o encarregado lança por ele). Um encarregado pode ser, ao mesmo tempo, conta e colaborador faturado.
@@ -68,6 +68,7 @@ Cada empresa de alocação (o **tenant**) tem um ambiente próprio e isolado, on
 ## 4. Fluxos principais
 
 ### 4.1 Onboarding self-service
+
 ```mermaid
 flowchart LR
     A["Empresa preenche registo"] --> B["Cria Tenant (slug único)"]
@@ -77,6 +78,7 @@ flowchart LR
 ```
 
 ### 4.2 Ciclo operacional
+
 ```mermaid
 flowchart LR
     L["Lançamento de horas"] --> V["Validação: alocação, 1 obra por dia, sobreposição"]
@@ -87,6 +89,7 @@ flowchart LR
 ```
 
 ### 4.3 Estados do registo de horas
+
 ```mermaid
 stateDiagram-v2
     [*] --> Rascunho
@@ -123,25 +126,25 @@ flowchart TD
 
 ### 5.1 Plataforma (fora do tenant)
 
-| Entidade | Razão de existir | Campos-chave |
-|----------|------------------|--------------|
-| **Tenant** | A empresa de alocação | id, slug (único global), nome, NIF, estado (ativo / suspenso / cancelado), fuso horário, moeda, criado_em |
-| **ConfiguracaoTenant** | Comportamento configurável sem bifurcar código | tenant_id, modo_lancamento (colaborador / encarregado / ambos), auto_aprovar_lancamento_encarregado, regra_arredondamento |
-| **ModuloTenant** | Feature flags por tenant (portal do cliente, regras por obra…) | tenant_id, modulo, ativo |
-| **SuperAdmin** | As suas contas de plataforma (separadas das contas dos tenants) | id, email, hash_senha |
+| Entidade               | Razão de existir                                                | Campos-chave                                                                                                              |
+| ---------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Tenant**             | A empresa de alocação                                           | id, slug (único global), nome, NIF, estado (ativo / suspenso / cancelado), fuso horário, moeda, criado_em                 |
+| **ConfiguracaoTenant** | Comportamento configurável sem bifurcar código                  | tenant_id, modo_lancamento (colaborador / encarregado / ambos), auto_aprovar_lancamento_encarregado, regra_arredondamento |
+| **ModuloTenant**       | Feature flags por tenant (portal do cliente, regras por obra…)  | tenant_id, modulo, ativo                                                                                                  |
+| **SuperAdmin**         | As suas contas de plataforma (separadas das contas dos tenants) | id, email, hash_senha                                                                                                     |
 
 > [!TIP]
 > Mesmo sem planos agora, guardar **módulos ativos por tenant** é o que permite lançar features gradualmente e, mais tarde, criar planos sem mexer no núcleo.
 
 ### 5.2 Identidade e acesso
 
-| Entidade | Campos-chave | Notas |
-|----------|--------------|-------|
-| **Conta** | id, tenant_id, username, hash_senha, colaborador_id (opcional), ativa, ultimo_acesso | Único: (tenant_id, username) |
-| **Perfil** | id, tenant_id, codigo, nome, sistema (s/n) | Os 4 perfis do MVP são semeados com `sistema = s` |
-| **Permissao** | codigo (ex.: `horas.aprovar`, `periodo.fechar`) | Catálogo global |
-| **PerfilPermissao** | perfil_id, permissao_codigo | |
-| **AtribuicaoPerfil** | tenant_id, conta_id, perfil_id, tipo_ambito (tenant / obra / cliente), ambito_id | Ex.: Encarregado com âmbito na obra X |
+| Entidade             | Campos-chave                                                                         | Notas                                             |
+| -------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| **Conta**            | id, tenant_id, username, hash_senha, colaborador_id (opcional), ativa, ultimo_acesso | Único: (tenant_id, username)                      |
+| **Perfil**           | id, tenant_id, codigo, nome, sistema (s/n)                                           | Os 4 perfis do MVP são semeados com `sistema = s` |
+| **Permissao**        | codigo (ex.: `horas.aprovar`, `periodo.fechar`)                                      | Catálogo global                                   |
+| **PerfilPermissao**  | perfil_id, permissao_codigo                                                          |                                                   |
+| **AtribuicaoPerfil** | tenant_id, conta_id, perfil_id, tipo_ambito (tenant / obra / cliente), ambito_id     | Ex.: Encarregado com âmbito na obra X             |
 
 ```mermaid
 erDiagram
@@ -156,13 +159,13 @@ erDiagram
 
 ### 5.3 Cadastros
 
-| Entidade | Campos-chave |
-|----------|--------------|
-| **EmpresaCliente** | id, tenant_id, nome, NIF, contactos, ativa |
-| **Obra** | id, tenant_id, cliente_id, nome, morada/localidade, data_inicio, data_fim, ativa |
-| **Funcao** | id, tenant_id, nome (servente, pedreiro, eletricista…), ativa |
-| **Colaborador** | id, tenant_id, funcao_id, nome, NIF, contactos, ativo, anonimizado_em |
-| **Alocacao** | id, tenant_id, colaborador_id, obra_id, inicio, fim (opcional) |
+| Entidade           | Campos-chave                                                                     |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **EmpresaCliente** | id, tenant_id, nome, NIF, contactos, ativa                                       |
+| **Obra**           | id, tenant_id, cliente_id, nome, morada/localidade, data_inicio, data_fim, ativa |
+| **Funcao**         | id, tenant_id, nome (servente, pedreiro, eletricista…), ativa                    |
+| **Colaborador**    | id, tenant_id, funcao_id, nome, NIF, contactos, ativo, anonimizado_em            |
+| **Alocacao**       | id, tenant_id, colaborador_id, obra_id, inicio, fim (opcional)                   |
 
 ```mermaid
 erDiagram
@@ -174,12 +177,12 @@ erDiagram
 
 ### 5.4 Regras e preços
 
-| Entidade | Campos-chave | Notas |
-|----------|--------------|-------|
-| **TipoHora** | id, tenant_id, codigo (NORMAL, EXTRA, NOTURNA, EXTRA_NOTURNA), nome | Semeado no onboarding. Cada minuto recebe exatamente um tipo |
-| **ConjuntoRegras** | id, tenant_id, obra_id (opcional, futuro), valido_de, valido_ate, limite_diario_min, noturno_inicio, noturno_fim | MVP: só ao nível do tenant (`obra_id` vazio) |
-| **TabelaPrecos** | id, tenant_id, cliente_id (opcional), obra_id (opcional), valido_de, valido_ate | Associada ao cliente **ou** à obra |
-| **LinhaPreco** | id, tenant_id, tabela_id, tipo_hora_id, funcao_id (opcional), colaborador_id (opcional), preco_hora_centimos | |
+| Entidade           | Campos-chave                                                                                                     | Notas                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **TipoHora**       | id, tenant_id, codigo (NORMAL, EXTRA, NOTURNA, EXTRA_NOTURNA), nome                                              | Semeado no onboarding. Cada minuto recebe exatamente um tipo |
+| **ConjuntoRegras** | id, tenant_id, obra_id (opcional, futuro), valido_de, valido_ate, limite_diario_min, noturno_inicio, noturno_fim | MVP: só ao nível do tenant (`obra_id` vazio)                 |
+| **TabelaPrecos**   | id, tenant_id, cliente_id (opcional), obra_id (opcional), valido_de, valido_ate                                  | Associada ao cliente **ou** à obra                           |
+| **LinhaPreco**     | id, tenant_id, tabela_id, tipo_hora_id, funcao_id (opcional), colaborador_id (opcional), preco_hora_centimos     |                                                              |
 
 **Resolução do preço (do mais específico para o mais genérico), para a data do registo:**
 
@@ -194,11 +197,11 @@ erDiagram
 
 ### 5.5 Operação (horas)
 
-| Entidade | Campos-chave | Notas |
-|----------|--------------|-------|
-| **RegistoHoras** | id, tenant_id, colaborador_id, obra_id, dia_trabalho, inicio, fim, pausa_min, minutos_trabalhados, funcao_id (cópia), estado, versao, lancado_por_conta_id, chave_idempotencia, criado_em | O facto: *o que aconteceu* |
-| **ParcelaHoras** | id, tenant_id, registo_id, tipo_hora_id, minutos, conjunto_regras_id (qual regra gerou) | A interpretação: *como se classifica*. Soma das parcelas = minutos_trabalhados |
-| **HistoricoRegisto** | id, tenant_id, registo_id, conta_id, acao, estado_de, estado_para, motivo, versao, snapshot, criado_em | Aprovar / rejeitar / reabrir / editar |
+| Entidade             | Campos-chave                                                                                                                                                                              | Notas                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **RegistoHoras**     | id, tenant_id, colaborador_id, obra_id, dia_trabalho, inicio, fim, pausa_min, minutos_trabalhados, funcao_id (cópia), estado, versao, lancado_por_conta_id, chave_idempotencia, criado_em | O facto: _o que aconteceu_                                                     |
+| **ParcelaHoras**     | id, tenant_id, registo_id, tipo_hora_id, minutos, conjunto_regras_id (qual regra gerou)                                                                                                   | A interpretação: _como se classifica_. Soma das parcelas = minutos_trabalhados |
+| **HistoricoRegisto** | id, tenant_id, registo_id, conta_id, acao, estado_de, estado_para, motivo, versao, snapshot, criado_em                                                                                    | Aprovar / rejeitar / reabrir / editar                                          |
 
 ```mermaid
 erDiagram
@@ -212,6 +215,7 @@ erDiagram
 ```
 
 **Algoritmo de classificação (MVP):**
+
 1. `minutos_trabalhados = (fim − início) − pausa`.
 2. `dia_trabalho` = data local (fuso do tenant) do **início** do turno.
 3. Minutos dentro da janela noturna → noturnos; restantes → diurnos.
@@ -223,10 +227,10 @@ erDiagram
 
 ### 5.6 Faturação
 
-| Entidade | Campos-chave | Notas |
-|----------|--------------|-------|
-| **Apuramento** (período) | id, tenant_id, cliente_id, data_inicio, data_fim, estado (aberto / fechado), fechado_por, fechado_em, total_minutos, total_centimos | Não pode haver apuramentos fechados sobrepostos para o mesmo cliente |
-| **LinhaApuramento** | id, tenant_id, apuramento_id, tipo (normal / ajuste), parcela_id, registo_id, obra_id, colaborador_id, funcao_id, tipo_hora_id, minutos, preco_hora_centimos_snapshot, valor_centimos, linha_original_id (nos ajustes), motivo | Snapshot imutável. Único: (tenant_id, parcela_id) para linhas normais |
+| Entidade                 | Campos-chave                                                                                                                                                                                                                   | Notas                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| **Apuramento** (período) | id, tenant_id, cliente_id, data_inicio, data_fim, estado (aberto / fechado), fechado_por, fechado_em, total_minutos, total_centimos                                                                                            | Não pode haver apuramentos fechados sobrepostos para o mesmo cliente  |
+| **LinhaApuramento**      | id, tenant_id, apuramento_id, tipo (normal / ajuste), parcela_id, registo_id, obra_id, colaborador_id, funcao_id, tipo_hora_id, minutos, preco_hora_centimos_snapshot, valor_centimos, linha_original_id (nos ajustes), motivo | Snapshot imutável. Único: (tenant_id, parcela_id) para linhas normais |
 
 ```mermaid
 erDiagram
@@ -242,8 +246,8 @@ erDiagram
 
 ### 5.7 Auditoria (transversal)
 
-| Entidade | Campos-chave |
-|----------|--------------|
+| Entidade            | Campos-chave                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
 | **EventoAuditoria** | id, tenant_id, conta_id ou super_admin_id, entidade, entidade_id, acao, antes, depois, ip, criado_em |
 
 Só se acrescentam linhas a esta tabela (nunca se editam ou apagam). Também regista os acessos "entrar como" do super-admin.
@@ -253,12 +257,14 @@ Só se acrescentam linhas a esta tabela (nunca se editam ou apagam). Também reg
 ## 6. Regras de integridade (impostas no banco sempre que possível)
 
 ### 6.1 Isolamento multi-tenant
+
 - Todas as tabelas de negócio têm `tenant_id` **obrigatório**.
 - **Chaves estrangeiras compostas** `(tenant_id, id)`: é fisicamente impossível uma obra do tenant A apontar para um cliente do tenant B.
 - **Isolamento por linha no banco**: cada sessão só vê o seu tenant, mesmo que o código se esqueça do filtro.
 - Todos os índices começam por `tenant_id`.
 
 ### 6.2 Registo de horas
+
 - `fim > início`; `0 ≤ pausa < duração`.
 - O colaborador tem de ter uma **alocação vigente** na obra na data do registo.
 - **Uma obra por colaborador por dia** (exceto em registos rejeitados).
@@ -267,47 +273,53 @@ Só se acrescentam linhas a esta tabela (nunca se editam ou apagam). Também reg
 - `chave_idempotencia` única por tenant (pedidos repetidos não duplicam registos).
 
 ### 6.3 Aprovação
+
 - Só aprova quem tem a permissão `horas.aprovar` com âmbito na obra.
 - Ninguém aprova o que lançou para si próprio, exceto com a configuração de auto-aprovação do encarregado.
 - **Controlo de versão**: a aprovação falha se o registo mudou desde que foi visto.
 
 ### 6.4 Preços e regras
+
 - Sem sobreposição de vigências para o mesmo alvo.
 - Valores monetários em **cêntimos inteiros**; durações em **minutos inteiros**.
 
 ### 6.5 Fecho
+
 - O fecho só é possível se todos os registos do cliente no período estiverem **aprovados e com preço**. Pendentes bloqueiam ou são explicitamente excluídos.
 - Ao fechar: as parcelas são copiadas para linhas de apuramento com snapshot do preço, e os registos passam a **Faturado**.
 - Uma parcela só pode estar em **um** apuramento normal.
 
 ### 6.6 Correções após o fecho
+
 - Nunca se edita um registo Faturado nem uma linha fechada.
 - Cria-se uma **linha de ajuste** (minutos e valor positivos ou negativos) no próximo apuramento aberto do cliente, com `linha_original_id` e motivo.
 
 ### 6.7 Tempo
+
 - Timestamps guardados em **UTC**; o `dia_trabalho` é calculado no **fuso do tenant**.
 
 ---
 
 ## 7. Princípios de escalabilidade e evolução
 
-| Princípio | Como se aplica |
-|-----------|----------------|
-| **Facto ≠ interpretação ≠ cobrança** | RegistoHoras → ParcelaHoras → LinhaApuramento. Novas regras e novos preços não tocam no histórico |
-| **Configuração como dados** | Regras, preços, perfis, módulos e modos de trabalho são linhas no banco, não `if` no código |
-| **Vigência em tudo o que muda com o tempo** | Preços, regras e alocações têm `valido_de` / `valido_ate` |
-| **Snapshots no momento da decisão** | Função copiada para o registo; regra registada na parcela; preço guardado na linha de apuramento |
-| **IDs globalmente únicos** (UUID) | Permitem mover um tenant grande para um banco dedicado sem colisões |
-| **Imutabilidade do que está fechado** | Ajustes em vez de edições; auditoria só por acréscimo |
-| **Arquivar, nunca apagar** | `ativo = falso`; anonimização RGPD do colaborador sem perder horas e apuramentos |
-| **Tabelas grandes particionáveis** | RegistoHoras, ParcelaHoras e EventoAuditoria podem ser particionadas por tempo quando crescerem |
-| **Campos opcionais já previstos** | `obra_id` nas regras, `colaborador_id` nas linhas de preço, âmbito "cliente" nos perfis: features futuras sem migração estrutural |
+| Princípio                                   | Como se aplica                                                                                                                    |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Facto ≠ interpretação ≠ cobrança**        | RegistoHoras → ParcelaHoras → LinhaApuramento. Novas regras e novos preços não tocam no histórico                                 |
+| **Configuração como dados**                 | Regras, preços, perfis, módulos e modos de trabalho são linhas no banco, não `if` no código                                       |
+| **Vigência em tudo o que muda com o tempo** | Preços, regras e alocações têm `valido_de` / `valido_ate`                                                                         |
+| **Snapshots no momento da decisão**         | Função copiada para o registo; regra registada na parcela; preço guardado na linha de apuramento                                  |
+| **IDs globalmente únicos** (UUID)           | Permitem mover um tenant grande para um banco dedicado sem colisões                                                               |
+| **Imutabilidade do que está fechado**       | Ajustes em vez de edições; auditoria só por acréscimo                                                                             |
+| **Arquivar, nunca apagar**                  | `ativo = falso`; anonimização RGPD do colaborador sem perder horas e apuramentos                                                  |
+| **Tabelas grandes particionáveis**          | RegistoHoras, ParcelaHoras e EventoAuditoria podem ser particionadas por tempo quando crescerem                                   |
+| **Campos opcionais já previstos**           | `obra_id` nas regras, `colaborador_id` nas linhas de preço, âmbito "cliente" nos perfis: features futuras sem migração estrutural |
 
 ---
 
 ## 8. Âmbito do MVP
 
 **Dentro**
+
 - Onboarding self-service (tenant + admin + dados padrão)
 - Gestão de contas e dos 4 perfis com âmbito
 - Clientes, obras, funções, colaboradores e alocações
@@ -322,18 +334,18 @@ Só se acrescentam linhas a esta tabela (nunca se editam ou apagam). Também reg
 
 **Fora (evolução futura)**
 
-| Feature | O modelo já suporta? |
-|---------|----------------------|
-| Portal do cliente / validação pelo cliente | ✅ perfil com âmbito "cliente" |
-| Regras diferentes por obra/cliente | ✅ `obra_id` em ConjuntoRegras |
-| Preço por colaborador específico | ✅ `colaborador_id` em LinhaPreco |
-| Feriados e fins de semana | ➕ nova tabela Calendário + novos tipos de hora |
-| Limite semanal | ➕ novo campo em ConjuntoRegras |
-| Várias obras no mesmo dia | ➕ remover restrição + regra de imputação de extras |
-| Planos, limites e cobrança do SaaS | ➕ Plano + Subscrição ligados a Tenant / ModuloTenant |
-| Integração com software de faturação certificado | ➕ exportação a partir do Apuramento |
-| App móvel / offline / geolocalização | ➕ a idempotência já está prevista |
-| Custo e margem | ❌ decidido fora do produto |
+| Feature                                          | O modelo já suporta?                                  |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| Portal do cliente / validação pelo cliente       | ✅ perfil com âmbito "cliente"                        |
+| Regras diferentes por obra/cliente               | ✅ `obra_id` em ConjuntoRegras                        |
+| Preço por colaborador específico                 | ✅ `colaborador_id` em LinhaPreco                     |
+| Feriados e fins de semana                        | ➕ nova tabela Calendário + novos tipos de hora       |
+| Limite semanal                                   | ➕ novo campo em ConjuntoRegras                       |
+| Várias obras no mesmo dia                        | ➕ remover restrição + regra de imputação de extras   |
+| Planos, limites e cobrança do SaaS               | ➕ Plano + Subscrição ligados a Tenant / ModuloTenant |
+| Integração com software de faturação certificado | ➕ exportação a partir do Apuramento                  |
+| App móvel / offline / geolocalização             | ➕ a idempotência já está prevista                    |
+| Custo e margem                                   | ❌ decidido fora do produto                           |
 
 ---
 

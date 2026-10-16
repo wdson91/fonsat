@@ -115,7 +115,9 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     const response = await request(app.getHttpServer())
       .get("/api/sites")
       .set("X-User-Id", String(user("admin").id));
-    const expected = await tenant.inCompany(companyA, (tx) => tx.site.findMany());
+    const expected = await tenant.inCompany(companyA, (tx) =>
+      tx.site.findMany(),
+    );
     expect(response.status).toBe(200);
     expect(response.body.map((s: { id: number }) => s.id).sort()).toEqual(
       expected.map((s) => s.id).sort(),

@@ -33,7 +33,10 @@ export async function api<T>(
   try {
     response = await fetch(`/api${path}`, {
       ...init,
-      headers: { ...(userId ? { "X-User-Id": String(userId) } : {}), ...(init ? { "Content-Type": "application/json" } : {}) },
+      headers: {
+        ...(userId ? { "X-User-Id": String(userId) } : {}),
+        ...(init ? { "Content-Type": "application/json" } : {}),
+      },
       signal,
       cache: "no-store",
     });

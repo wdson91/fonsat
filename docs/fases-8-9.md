@@ -8,7 +8,7 @@ A grelha semanal apresenta cada dia, horas de trabalho e de pausa, intervalos, c
 
 Cada período guarda os dois eventos na mesma transação local, com um turno comum e UUIDs distintos. O backend distingue `work` e `break`; um turno não pode mudar de categoria ou misturar trabalho e pausa. Pausas aparecem no histórico mas são excluídas da fonte de faturação. As linhas não apagam nem alteram factos enviados: correções continuam sujeitas às permissões e à versão esperada.
 
-Exemplo das imagens: 09:00–13:30 trabalho, 13:30–13:45 pausa, 13:45–14:00 trabalho, 14:00–15:00 pausa, 15:00–18:00 trabalho. Resultado: **7h45 de trabalho e 1h15 de pausa**. A distribuição não define uma meta diária de oito horas. Marcar a hora atual permanece como alternativa para capturar entrada/saída em tempo real.
+Exemplo das imagens: 09:00–13:30 trabalho, 13:30–13:45 pausa, 13:45–14:00 trabalho, 14:00–15:00 pausa, 15:00–18:00 trabalho. Resultado: **7h45 de trabalho e 1h15 de pausa**. A distribuição não define uma meta diária de oito horas. A grelha é a única interface de registo. Nas entradas antigas sem saída, Concluir período permite indicar a data e hora de saída, preservando a entrada original.
 
 ## Reabertura offline e autoria
 

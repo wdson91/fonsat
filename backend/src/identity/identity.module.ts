@@ -8,7 +8,13 @@ import { IdentityService } from "./identity.service";
 @Module({
   imports: [PrismaModule],
   controllers: [IdentityController],
-  providers: [IdentityService, { provide: APP_GUARD, useClass: IdentityGuard }],
+  providers: [
+    IdentityService,
+    {
+      provide: APP_GUARD,
+      useClass: IdentityGuard,
+    },
+  ],
   exports: [IdentityService],
 })
 export class IdentityModule {}

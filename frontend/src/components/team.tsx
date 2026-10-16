@@ -61,7 +61,9 @@ export function Team({ me }: { me: CurrentUser }) {
         endAt: body.endAt ? new Date(String(body.endAt)).toISOString() : null,
         reason: body.reason,
       });
-      setMessage("Correção guardada; o original foi preservado.");
+      setMessage(
+        "Correção guardada; o original foi preservado. Registos sem pendências saem do filtro Só pendências.",
+      );
       reload(false);
     } catch (e) {
       setMessage((e as Error).message);
@@ -107,6 +109,10 @@ export function Team({ me }: { me: CurrentUser }) {
               ))}
             </ul>
           )}
+          {onlyPending &&
+            !data.entries.some((entry) => entry.alerts.length > 0) && (
+              <p>Sem registos pendentes de revisão.</p>
+            )}
           <ul className="record-list">
             {data.entries
               .filter((e) => !onlyPending || e.alerts.length)
@@ -129,6 +135,16 @@ export function Team({ me }: { me: CurrentUser }) {
                         {a}
                       </p>
                     ))}
+                    {e.observations?.map((observation) => (
+                      <p key={observation}>{observation}</p>
+                    ))}
+                    {e.alerts.length > 0 && (
+                      <p>
+                        Requer revisão pelos motivos indicados acima. A correção
+                        permite confirmar a obra e o ofício ou corrigir as
+                        horas.
+                      </p>
+                    )}
                     <button
                       onClick={() => {
                         setEditing(e);
@@ -241,6 +257,12 @@ export function Team({ me }: { me: CurrentUser }) {
               defaultValue={localInput(editing.current.endAt)}
             />
           </label>
+          <p>
+            Ao guardar, confirma a obra, o ofício e os horários desta versão. As
+            divergências da distribuição e as marcações originais já revistas
+            ficam no histórico; novas marcações podem exigir outra revisão.
+            Falta de preço e períodos incompletos continuam pendentes.
+          </p>
           <label>
             Motivo
             <textarea name="reason" required maxLength={500} />

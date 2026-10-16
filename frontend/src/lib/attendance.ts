@@ -30,5 +30,6 @@ export interface WorkEntry {
     siteId: number;
   }[];
   alerts: string[];
+  observations?: string[];
   overtime: boolean;
 }

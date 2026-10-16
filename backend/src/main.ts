@@ -1,9 +1,11 @@
 import { createApp } from "./app";
-async function main() {
+
+async function bootstrap() {
   const app = await createApp();
-  await app.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
+  await app.listen(process.env.PORT ?? 3001);
 }
-main().catch((error) => {
+
+bootstrap().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });

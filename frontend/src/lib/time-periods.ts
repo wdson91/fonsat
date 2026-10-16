@@ -61,7 +61,7 @@ export function wallTime(day: string, time: string, zone: string) {
     )
   )
     throw new Error(
-      "Esta hora ocorre duas vezes devido à mudança de hora. Use a marcação da hora atual ou peça uma correção ao encarregado.",
+      "Esta hora ocorre duas vezes devido à mudança de hora. Peça uma correção ao encarregado.",
     );
   return new Date(candidate).toISOString();
 }

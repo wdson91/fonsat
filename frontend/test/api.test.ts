@@ -28,13 +28,11 @@ it("mantém pedidos públicos sem cabeçalho de identidade", async () => {
 it("distingue identidade inválida de falha de rede", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue({
-        ok: false,
-        status: 401,
-        json: async () => ({ message: "Escolha novamente." }),
-      }),
+    vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: "Escolha novamente." }),
+    }),
   );
   await expect(api("/me", 99)).rejects.toMatchObject({
     status: 401,

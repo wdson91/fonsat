@@ -1,5 +1,5 @@
 import { Controller, Get, Header, Param, ParseIntPipe } from "@nestjs/common";
-import { Actor, CurrentUser, Roles } from "../identity/identity";
+import { Actor, type CurrentUser, Roles } from "../identity/identity";
 import { SitesService } from "./sites.service";
 
 @Controller("sites")
@@ -15,10 +15,7 @@ export class SitesController {
 
   @Get(":id")
   @Header("Cache-Control", "no-store")
-  findOne(
-    @Actor() user: CurrentUser,
-    @Param("id", ParseIntPipe) id: number,
-  ) {
+  findOne(@Actor() user: CurrentUser, @Param("id", ParseIntPipe) id: number) {
     return this.sitesService.findOne(user, id);
   }
 }

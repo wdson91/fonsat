@@ -18,7 +18,7 @@ As duas empresas têm dois clientes, duas obras, três trabalhadores, dois ofíc
 
 Escolher uma pessoa em «Quem está a usar?» e trocar no seletor do topo. A escolha é uma simulação de identidade; não existe login real. O servidor resolve papel, empresa e âmbito a partir de `X-User-Id`.
 
-- **Trabalhador:** grelha semanal com cada intervalo numa linha, categoria Trabalho/Pausa, horas e obra. Adicionar abre o formulário da referência visual. Os períodos de pausa não são faturáveis. A alternativa Marcar a hora atual mantém entrada/saída em tempo real.
+- **Trabalhador:** grelha semanal com cada intervalo numa linha, categoria Trabalho/Pausa, horas e obra. Adicionar abre o formulário da referência visual. Os períodos de pausa não são faturáveis. A grelha é a única forma de registo; entradas antigas abertas podem ser concluídas na própria linha.
 - **Encarregado:** distribuição e equipa nas obras da sua responsabilidade ativa; corrige com motivo e versão esperada.
 - **Administrativo:** cadastros, distribuição, correções, preços, exclusões, emissão e ajustes. Transferências entre clientes requerem este papel.
 - **Cliente:** apenas os seus documentos emitidos e a explicação das linhas.

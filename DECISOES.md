@@ -12,11 +12,11 @@ As tabelas operacionais usam RLS, referências compostas e uma conta da aplicaç
 
 ## Tempo, períodos e correções
 
-A grelha do trabalhador segue a referência fornecida: dias, intervalos, categoria Trabalho/Pausa e localização. Cada novo período gera UUIDs próprios para os dois extremos e um identificador de turno comum. Trabalho e pausas são períodos separados; pausas não são faturáveis. Não se inventa uma meta diária de oito horas: a distribuição define obras, não horários.
+A grelha do trabalhador segue a referência fornecida: dias, intervalos, categoria Trabalho/Pausa e localização. Cada novo período gera UUIDs próprios para os dois extremos e um identificador de turno comum. Trabalho e pausas são períodos separados; pausas não são faturáveis. A distribuição define obras, não horários. Oito horas são o limiar de aviso: a grelha pede confirmação acima desse total diário, lembra as pausas e preserva as horas confirmadas.
 
-Os instantes são preservados. O cálculo trunca os extremos ao minuto; o dia e o preço seguem o início no fuso da empresa. Um turno pode atravessar a meia-noite. Na introdução manual, horas inexistentes ou ambíguas na mudança de hora são recusadas com explicação; a marcação da hora atual continua a preservar o instante real.
+Os instantes são preservados. O cálculo trunca os extremos ao minuto; o dia e o preço seguem o início no fuso da empresa. Um turno pode atravessar a meia-noite. Na introdução manual, horas inexistentes ou ambíguas na mudança de hora são recusadas com explicação; nesses casos, é necessária uma correção pelo encarregado.
 
-Factos são imutáveis. Uma correção acrescenta versão, motivo, autor e data; a versão esperada protege contra concorrência. Trabalhadores acrescentam marcações, mas não apagam nem corrigem factos enviados. Uma marcação tardia não substitui uma correção manual. Desvios do planeamento e atrasos de receção são avisos, sem presumir que provam erro no relógio.
+Factos são imutáveis. Uma correção acrescenta versão, motivo, autor e data; a versão esperada protege contra concorrência. Trabalhadores acrescentam marcações, mas não apagam nem corrigem factos enviados. Uma marcação tardia não substitui uma correção manual. Desvios do planeamento e atrasos de receção são avisos. A correção confirma a exceção e resolve os avisos dos eventos já revistos; novos eventos, preço ausente e períodos incompletos continuam pendentes.
 
 ## Offline e autoria
 

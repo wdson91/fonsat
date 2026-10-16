@@ -1,7 +1,7 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../generated/prisma/client';
+import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma/client";
 
 @Injectable()
 export class PrismaService
@@ -10,7 +10,7 @@ export class PrismaService
 {
   constructor(configService: ConfigService) {
     const adapter = new PrismaPg({
-      connectionString: configService.getOrThrow<string>('DATABASE_URL'),
+      connectionString: configService.getOrThrow<string>("DATABASE_URL"),
       max: 5,
     });
     super({ adapter });
@@ -23,5 +23,4 @@ export class PrismaService
   async onModuleDestroy() {
     await this.$disconnect();
   }
-
 }

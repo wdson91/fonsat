@@ -6,19 +6,34 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import {
+  IS_PUBLIC_KEY,
+  ROLES_KEY,
+  type CurrentUser,
+  type Role,
+} from "./identity";
 import { IdentityService } from "./identity.service";
-import type { Role } from "./identity";
+
 @Injectable()
 export class IdentityGuard implements CanActivate {
   constructor(
     private readonly identityService: IdentityService,
     private readonly reflector: Reflector,
   ) {}
-  async canActivate(context: ExecutionContext) {
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const targets = [context.getHandler(), context.getClass()];
-    if (this.reflector.getAllAndOverride<boolean>("public", targets))
+    const isPublic = this.reflector.getAllAndOverride<boolean>(
+      IS_PUBLIC_KEY,
+      targets,
+    );
+    if (isPublic) {
       return true;
-    const request = context.switchToHttp().getRequest();
+    }
+
+    const request = context
+      .switchToHttp()
+      .getRequest<{ headers: Record<string, unknown>; actor?: CurrentUser }>();
     const header = request.headers["x-user-id"];
     if (
       typeof header !== "string" ||
@@ -27,17 +42,26 @@ export class IdentityGuard implements CanActivate {
     ) {
       throw new UnauthorizedException("Selecione um utilizador válido.");
     }
+
     const user = await this.identityService.resolveUser(Number(header));
-    if (!user)
+    if (!user) {
       throw new UnauthorizedException(
         "Utilizador desconhecido. Volte a selecionar.",
       );
+    }
+
     request.actor = user;
-    const roles = this.reflector.getAllAndOverride<Role[]>("roles", targets);
-    if (roles && !roles.includes(user.role))
+
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>(
+      ROLES_KEY,
+      targets,
+    );
+    if (requiredRoles && !requiredRoles.includes(user.role)) {
       throw new ForbiddenException(
         "Este perfil não tem acesso a esta operação.",
       );
+    }
+
     return true;
   }
 }

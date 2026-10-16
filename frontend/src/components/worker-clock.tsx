@@ -8,8 +8,6 @@ import {
   flushQueue,
   queuedEvents,
   readShift,
-  saveShift,
-  type ActiveShift,
 } from "../lib/clock-queue";
 import {
   invalidateWorkerContext,
@@ -17,7 +15,6 @@ import {
   workerContext,
   type WorkerBootstrap,
 } from "../lib/offline-context";
-import { addDays, companyDay, monday } from "../lib/operations";
 import type { WorkEntry } from "../lib/attendance";
 import type { QueueEvent } from "../lib/queue-sync";
 import { periodRows } from "../lib/time-periods";
@@ -40,11 +37,8 @@ export function WorkerClock({
   const [data, setData] = useState<WorkerBootstrap | null>(null),
     [entries, setEntries] = useState<WorkEntry[]>([]),
     [localEvents, setLocalEvents] = useState<QueueEvent[]>([]),
-    [active, setActive] = useState<ActiveShift | null>(null),
-    [siteId, setSiteId] = useState(""),
     [pending, setPending] = useState(0),
     [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false),
     [prepared, setPrepared] = useState(false),
     [ready, setReady] = useState(false);
   const mounted = useRef<AbortController | null>(null);
@@ -73,50 +67,11 @@ export function WorkerClock({
       if (signal.aborted) return;
       setData(bootstrap);
       setEntries(list);
-      setSiteId(
-        (previous) => previous || String(bootstrap.suggestedSiteId ?? ""),
-      );
       const minimal = list.slice(0, 200);
       await saveWorkerContext(me, bootstrap, minimal);
       if (signal.aborted) return;
       setPrepared(true);
       onConnected?.();
-      const session = await readShift(scope),
-        queue = await queuedEvents(scope);
-      if (signal.aborted) return;
-      if (
-        session?.active &&
-        list.some(
-          (entry) =>
-            entry.id === session.active?.shiftId && entry.current.endAt,
-        ) &&
-        !queue.some((event) => event.shiftId === session.active?.shiftId)
-      ) {
-        await saveShift(scope, null);
-        if (!signal.aborted) setActive(null);
-      } else if (session) {
-        setActive(session.active);
-        if (session.active) setSiteId(String(session.active.siteId));
-      } else {
-        const open = list.find(
-          (entry) =>
-            entry.activity !== "break" &&
-            entry.current.startAt &&
-            !entry.current.endAt,
-        );
-        if (open) {
-          const restored = {
-            shiftId: open.id,
-            siteId: open.current.siteId,
-            startAt: open.current.startAt!,
-          };
-          await saveShift(scope, restored);
-          if (!signal.aborted) {
-            setActive(restored);
-            setSiteId(String(restored.siteId));
-          }
-        }
-      }
       const latest = await queuedEvents(scope);
       if (!signal.aborted) {
         setPending(latest.length);
@@ -153,9 +108,8 @@ export function WorkerClock({
     mounted.current = controller;
     async function load() {
       try {
-        const [cached, session, queue] = await Promise.all([
+        const [cached, queue] = await Promise.all([
           workerContext(me.id),
-          readShift(scope),
           queuedEvents(scope),
         ]);
         if (controller.signal.aborted) return;
@@ -163,13 +117,7 @@ export function WorkerClock({
           setData(cached.bootstrap);
           setEntries(cached.entries);
           setPrepared(true);
-          setSiteId(
-            String(
-              session?.active?.siteId ?? cached.bootstrap.suggestedSiteId ?? "",
-            ),
-          );
         }
-        setActive(session?.active ?? null);
         setPending(queue.length);
         setLocalEvents(queue);
         setReady(true);
@@ -210,38 +158,24 @@ export function WorkerClock({
       window.removeEventListener("online", online);
     };
   }, [me.id, scope, refresh, synchronize, rejectIdentity]);
-  async function clock() {
+  async function completePeriod(event: QueueEvent) {
     const controller = mounted.current;
-    if (busy || !ready || !controller || controller.signal.aborted) return;
-    setBusy(true);
-    try {
-      const time = new Date().toISOString(),
-        shiftId = active?.shiftId ?? crypto.randomUUID(),
-        selectedSite = active?.siteId ?? Number(siteId);
-      if (!selectedSite) throw new Error("Selecione uma obra.");
-      const next = active
+    if (!controller || controller.signal.aborted || !ready)
+      throw new Error("Aguarde a preparação dos dados.");
+    if (event.userId !== scope.userId || event.companyId !== scope.companyId)
+      throw new Error("A seleção mudou. Volte a abrir o formulário.");
+    const session = await readShift(scope);
+    await enqueue(
+      event,
+      session?.active?.shiftId === event.shiftId
         ? null
-        : { shiftId, siteId: selectedSite, startAt: time };
-      const event: QueueEvent = {
-        id: crypto.randomUUID(),
-        shiftId,
-        siteId: selectedSite,
-        kind: active ? "out" : "in",
-        occurredAt: time,
-        ...scope,
-      };
-      await enqueue(event, next);
-      if (controller.signal.aborted) return;
-      setActive(next);
-      setLocalEvents((previous) => [...previous, event]);
-      setPending((count) => count + 1);
-      setMessage("Marcação guardada no dispositivo.");
-      await synchronize();
-    } catch (error) {
-      if (!controller.signal.aborted) setMessage((error as Error).message);
-    } finally {
-      if (!controller.signal.aborted) setBusy(false);
-    }
+        : (session?.active ?? null),
+    );
+    if (controller.signal.aborted) return;
+    setLocalEvents((previous) => [...previous, event]);
+    setPending((count) => count + 1);
+    setMessage("Saída guardada no dispositivo.");
+    void synchronize();
   }
   async function addPeriod(events: [QueueEvent, QueueEvent]) {
     const controller = mounted.current;
@@ -261,7 +195,6 @@ export function WorkerClock({
     setMessage("Período guardado no dispositivo.");
     void synchronize();
   }
-  const today = companyDay(me.time_zone);
   const rows = periodRows(
     entries,
     localEvents,
@@ -280,62 +213,17 @@ export function WorkerClock({
         me={me}
         rows={rows}
         sites={data?.sites ?? []}
+        allocations={data?.allocations}
+        suggestedSiteId={data?.suggestedSiteId}
         onAdd={addPeriod}
+        onComplete={completePeriod}
       />
-      <div className="quick-clock">
-        <h3>Marcar a hora atual</h3>
-        <label>
-          Obra
-          <select
-            value={active ? String(active.siteId) : siteId}
-            disabled={!!active}
-            onChange={(e) => setSiteId(e.target.value)}
-          >
-            <option value="">Selecionar obra…</option>
-            {data?.sites
-              .filter((s) => s.active || s.id === active?.siteId)
-              .map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-          </select>
-        </label>
-        {active && (
-          <p>
-            Entrada em{" "}
-            {new Date(active.startAt).toLocaleString("pt-PT", {
-              timeZone: me.time_zone,
-            })}
-            . Para uma pausa, registe a saída e uma nova entrada ao regressar.
-          </p>
-        )}
-        {active &&
-          new Intl.DateTimeFormat("en-CA", {
-            timeZone: me.time_zone,
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          }).format(new Date(active.startAt)) < today && (
-            <p>
-              Turno anterior em aberto. Contacte o seu encarregado se se
-              esqueceu da saída.
-            </p>
-          )}
-        <button
-          className="primary clock-button"
-          disabled={busy || !ready || (!active && !siteId)}
-          onClick={() => void clock()}
-        >
-          {active ? "Registar saída" : "Registar entrada"}
-        </button>
-      </div>
       <p role="status">
         {pending
           ? `${pending} marcações pendentes de sincronização`
           : "Sem marcações pendentes"}
       </p>
-      <button className="sync-now" disabled={busy} onClick={() => void synchronize()}>
+      <button className="sync-now" onClick={() => void synchronize()}>
         Sincronizar agora
       </button>
       {message && <p role="status">{message}</p>}

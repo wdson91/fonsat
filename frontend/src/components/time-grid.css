@@ -126,7 +126,18 @@
   background: #fff;
   white-space: nowrap;
 }
-.time-box-incomplete { background: #fff1f3; color: #a1263e; border-color: #efb8c3; }
+.time-box .time-box-date {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: #526177;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+.time-box-incomplete {
+  background: #fff1f3;
+  color: #a1263e;
+  border-color: #efb8c3;
+}
 .period-history {
   border: 1px solid #e0e2e8;
   border-radius: 50%;
@@ -311,22 +322,13 @@
   font-size: 0.8rem;
   margin-bottom: 0.6rem;
 }
-.worker-clock .sync-now { margin: .6rem 0; padding: .55rem .85rem; border: 1px solid #dfe2e8; border-radius: 8px; background: #fff; color: #36516e; }
-.worker-clock .quick-clock {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: #f8f9fb;
-  border-radius: 10px;
-}
-.worker-clock .quick-clock .clock-button {
-  display: inline-block;
-  width: auto;
-  padding: 0.7rem 1rem;
-  font-size: 0.9rem;
-  margin: 0.7rem 0;
-}
-.quick-clock h3 {
-  margin-top: 0;
+.worker-clock .sync-now {
+  margin: 0.6rem 0;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #dfe2e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #36516e;
 }
 @media (max-width: 700px) {
   .time-day-heading {

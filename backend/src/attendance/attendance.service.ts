@@ -44,6 +44,11 @@ export class AttendanceService {
           select: { id: true, name: true, active: true },
         }),
         suggestedSiteId: allocation?.siteId ?? null,
+        allocations: await tx.allocation.findMany({
+          where: { workerId: worker.id },
+          select: { day: true, siteId: true },
+          orderBy: { day: "asc" },
+        }),
       };
     });
   }
@@ -242,6 +247,11 @@ export class AttendanceService {
             (a) => a.workerId === e.workerId && +a.day === +current.workedOn,
           );
           const alerts: string[] = [];
+          const observations: string[] = [];
+          const reviewed = current.source === "manual";
+          const eventAlerts = reviewed
+            ? e.events.filter((ev) => ev.receivedAt > current.createdAt)
+            : e.events;
           if (
             e.activity === "work" &&
             !rates.some(
@@ -255,10 +265,19 @@ export class AttendanceService {
             alerts.push("Sem preço para o cliente e ofício nesta data.");
           if (current.minutes === null)
             alerts.push("Registo incompleto: falta entrada ou saída.");
-          if (!allocation || allocation.siteId !== current.siteId)
-            alerts.push("Fora da distribuição.");
+          if (!allocation || allocation.siteId !== current.siteId) {
+            const planned = allocation;
+            const explanation = planned
+              ? "Obra diferente da distribuição deste dia."
+              : "Sem distribuição para este trabalhador neste dia.";
+            if (reviewed)
+              observations.push(
+                explanation + " Exceção confirmada na correção.",
+              );
+            else alerts.push(explanation);
+          }
           if (
-            e.events.some(
+            eventAlerts.some(
               (ev) => Math.abs(+ev.receivedAt - +ev.occurredAt) > 86400000,
             )
           )
@@ -271,13 +290,14 @@ export class AttendanceService {
               "Marcação tardia após correção manual: requer revisão.",
             );
           if (
-            e.events.filter((ev) => ev.kind === "in" || ev.kind === "break_in")
-              .length > 1 ||
-            e.events.filter(
+            eventAlerts.filter(
+              (ev) => ev.kind === "in" || ev.kind === "break_in",
+            ).length > 1 ||
+            eventAlerts.filter(
               (ev) => ev.kind === "out" || ev.kind === "break_out",
             ).length > 1 ||
-            e.events.some((ev) => ev.siteId !== current.siteId) ||
-            e.events.some(
+            eventAlerts.some((ev) => ev.siteId !== current.siteId) ||
+            eventAlerts.some(
               (ev) =>
                 (ev.kind === "out" || ev.kind === "break_out") &&
                 current.startAt &&
@@ -295,6 +315,7 @@ export class AttendanceService {
               : e.events,
             current,
             alerts,
+            observations,
             overtime: e.activity === "work" && (current.minutes ?? 0) > 480,
           };
         });

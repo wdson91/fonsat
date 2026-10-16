@@ -1,3 +1,4 @@
+import { addGridPeriod } from "./grid-helper";
 import {
   chromium,
   expect,
@@ -87,18 +88,7 @@ async function queue(page: Page) {
   );
 }
 async function pair(page: Page) {
-  await page
-    .getByRole("combobox", { name: "Obra", exact: true })
-    .selectOption({ index: 1 });
-  await page
-    .getByRole("button", { name: "Registar entrada", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Registar saída", exact: true }),
-  ).toBeEnabled();
-  await page
-    .getByRole("button", { name: "Registar saída", exact: true })
-    .click();
+  await addGridPeriod(page);
   await expect(
     page.getByText("2 marcações pendentes de sincronização", { exact: true }),
   ).toBeVisible();
@@ -198,12 +188,7 @@ test("troca durante um pedido iniciado mantém a autoria e confirma apenas a fil
     const response = await route.fetch();
     await route.fulfill({ response });
   });
-  await page
-    .getByRole("combobox", { name: "Obra", exact: true })
-    .selectOption({ index: 1 });
-  await page
-    .getByRole("button", { name: "Registar entrada", exact: true })
-    .click();
+  await addGridPeriod(page);
   await ready;
   await page
     .getByRole("combobox", { name: "Trocar de utilizador" })
@@ -218,7 +203,7 @@ test("troca durante um pedido iniciado mantém a autoria e confirma apenas a fil
     .toBe(0);
   expect(captured?.user).toBe(String(a.id));
   await expect(
-    page.getByRole("button", { name: "Registar entrada", exact: true }),
+    page.getByRole("button", { name: /Adicionar período em/ }).first(),
   ).toBeEnabled();
   const wrong = await (
     await request.get("/api/attendance/entries", {
@@ -245,14 +230,9 @@ test("resposta perdida conserva eventos e o reenvio não duplica factos", async 
     await route.abort();
     responseLost();
   });
-  await page
-    .getByRole("combobox", { name: "Obra", exact: true })
-    .selectOption({ index: 1 });
-  await page
-    .getByRole("button", { name: "Registar entrada", exact: true })
-    .click();
+  await addGridPeriod(page);
   await expect(
-    page.getByText("1 marcações pendentes de sincronização", { exact: true }),
+    page.getByText("2 marcações pendentes de sincronização", { exact: true }),
   ).toBeVisible();
   await lost;
   const saved = await queue(page);

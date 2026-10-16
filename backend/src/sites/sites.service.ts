@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { TenantService } from '../database/tenant.service';
-import type { Prisma } from '../generated/prisma/client';
-import type { CurrentUser } from '../identity/identity';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { TenantService } from "../database/tenant.service";
+import type { Prisma } from "../generated/prisma/client";
+import type { CurrentUser } from "../identity/identity";
 
 @Injectable()
 export class SitesService {
@@ -12,7 +12,7 @@ export class SitesService {
       tx.site.findMany({
         where: this.buildScope(user),
         select: { id: true, name: true },
-        orderBy: { name: 'asc' },
+        orderBy: { name: "asc" },
       }),
     );
   }
@@ -25,20 +25,20 @@ export class SitesService {
       }),
     );
     if (!site) {
-      throw new NotFoundException('Obra não encontrada.');
+      throw new NotFoundException("Obra não encontrada.");
     }
     return site;
   }
 
   private buildScope(user: CurrentUser): Prisma.SiteWhereInput {
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       return {};
     }
-    const day = new Intl.DateTimeFormat('en-CA', {
+    const day = new Intl.DateTimeFormat("en-CA", {
       timeZone: user.time_zone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     }).format(new Date());
     const today = new Date(`${day}T00:00:00Z`);
     return {
@@ -52,4 +52,3 @@ export class SitesService {
     };
   }
 }
-

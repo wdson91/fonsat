@@ -6,6 +6,7 @@ export interface WorkerBootstrap {
   worker: { id: number; name: string };
   sites: { id: number; name: string; active: boolean }[];
   suggestedSiteId: number | null;
+  allocations?: { day: string; siteId: number }[];
 }
 export interface WorkerContext {
   key: string;

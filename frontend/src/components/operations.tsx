@@ -108,7 +108,18 @@ function CatalogArea({ me, planning }: { me: CurrentUser; planning: boolean }) {
     <>
       {error && <p role="alert">{error}</p>}
       {!catalog ? (
-        error ? <button onClick={() => { setError(''); refresh((n) => n + 1); }}>Tentar carregar cadastros</button> : <p>A carregar cadastros…</p>
+        error ? (
+          <button
+            onClick={() => {
+              setError("");
+              refresh((n) => n + 1);
+            }}
+          >
+            Tentar carregar cadastros
+          </button>
+        ) : (
+          <p>A carregar cadastros…</p>
+        )
       ) : planning ? (
         <Planning me={me} catalog={catalog} />
       ) : (
@@ -136,6 +147,13 @@ function CatalogEditor({
   const [editing, setEditing] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [responsibilityEdit, setResponsibilityEdit] = useState<{
+    id: number;
+    replace: boolean;
+  } | null>(null);
+  const responsibility = catalog.responsibilities.find(
+    (r) => r.id === responsibilityEdit?.id,
+  );
   const item = catalog[kind].find((i) => i.id === editing);
   async function save(form: HTMLFormElement) {
     setBusy(true);
@@ -311,8 +329,19 @@ function CatalogEditor({
         ))}
       </ul>
       <h3>Responsabilidade por obra</h3>
+      <p>
+        Adicionar permite vários encarregados na obra. Substituir termina a
+        responsabilidade escolhida na véspera. O mesmo encarregado não pode ter
+        períodos sobrepostos na mesma obra.
+      </p>
       <form
+        key={
+          responsibilityEdit
+            ? `${responsibilityEdit.id}-${responsibilityEdit.replace}`
+            : "new-responsibility"
+        }
         className="operation-form"
+        aria-label="Responsabilidade por obra"
         onSubmit={async (e) => {
           e.preventDefault();
           const f = e.currentTarget;
@@ -321,9 +350,16 @@ function CatalogEditor({
           try {
             await command(me.id, "/catalog/responsibilities", "POST", {
               ...data,
+              ...(responsibilityEdit
+                ? responsibilityEdit.replace
+                  ? { replaceId: responsibilityEdit.id }
+                  : { id: responsibilityEdit.id }
+                : {}),
               siteId: Number(data.siteId),
               userId: Number(data.userId),
             });
+            setResponsibilityEdit(null);
+            f.reset();
             refresh();
             setMessage("Responsabilidade guardada.");
           } catch (error) {
@@ -335,27 +371,72 @@ function CatalogEditor({
       >
         <label>
           Obra
-          <select name="siteId" required>
-            <Choices items={catalog.sites} />
+          <select
+            name="siteId"
+            required
+            defaultValue={responsibility?.siteId ?? ""}
+          >
+            <Choices
+              items={
+                responsibilityEdit
+                  ? catalog.sites.filter((s) => s.id === responsibility?.siteId)
+                  : catalog.sites
+              }
+            />
           </select>
         </label>
         <label>
           Encarregado
-          <select name="userId" required>
+          <select
+            name="userId"
+            required
+            defaultValue={
+              responsibilityEdit?.replace ? "" : (responsibility?.userId ?? "")
+            }
+          >
             <Choices
-              items={catalog.users.filter((u) => u.role === "foreman")}
+              items={catalog.users.filter(
+                (u) =>
+                  u.role === "foreman" &&
+                  (!responsibilityEdit?.replace ||
+                    u.id !== responsibility?.userId),
+              )}
             />
           </select>
         </label>
         <label>
           Desde
-          <input name="startsOn" type="date" required />
+          <input
+            name="startsOn"
+            type="date"
+            required
+            defaultValue={
+              responsibilityEdit?.replace
+                ? companyDay(me.time_zone)
+                : responsibility?.startsOn.slice(0, 10)
+            }
+          />
         </label>
         <label>
           Até
-          <input name="endsOn" type="date" />
+          <input
+            name="endsOn"
+            type="date"
+            defaultValue={responsibility?.endsOn?.slice(0, 10) ?? ""}
+          />
         </label>
-        <button disabled={busy}>Guardar responsabilidade</button>
+        <button disabled={busy}>
+          {responsibilityEdit
+            ? responsibilityEdit.replace
+              ? "Confirmar substituição"
+              : "Guardar responsabilidade"
+            : "Adicionar encarregado"}
+        </button>
+        {responsibilityEdit && (
+          <button type="button" onClick={() => setResponsibilityEdit(null)}>
+            Cancelar responsabilidade
+          </button>
+        )}
       </form>
       <ul>
         {catalog.responsibilities.map((r) => (
@@ -363,6 +444,35 @@ function CatalogEditor({
             {catalog.sites.find((s) => s.id === r.siteId)?.name} ·{" "}
             {catalog.users.find((u) => u.id === r.userId)?.name} ·{" "}
             {r.startsOn.slice(0, 10)} até {r.endsOn?.slice(0, 10) ?? "sem fim"}
+            {catalog.responsibilities.some(
+              (other) =>
+                other.id !== r.id &&
+                other.siteId === r.siteId &&
+                other.userId === r.userId &&
+                (!r.endsOn ||
+                  other.startsOn.slice(0, 10) <= r.endsOn.slice(0, 10)) &&
+                (!other.endsOn ||
+                  r.startsOn.slice(0, 10) <= other.endsOn.slice(0, 10)),
+            ) && (
+              <p className="pending-alert">
+                Este período sobrepõe outro do mesmo encarregado nesta obra. Use
+                Editar responsabilidade para ajustar as datas.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                setResponsibilityEdit({ id: r.id, replace: false })
+              }
+            >
+              Editar responsabilidade
+            </button>
+            <button
+              type="button"
+              onClick={() => setResponsibilityEdit({ id: r.id, replace: true })}
+            >
+              Substituir encarregado
+            </button>
           </li>
         ))}
       </ul>
@@ -393,6 +503,16 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
     return () => c.abort();
   }, [me.id, week, revision]);
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
+  const editingWorker = catalog.workers.find(
+    (worker) => worker.id === edit?.workerId,
+  );
+  const habitualTrade = catalog.trades.find(
+    (trade) => trade.id === editingWorker?.tradeId,
+  );
+  const outsideTrade =
+    edit?.tradeId && edit.tradeId !== editingWorker?.tradeId
+      ? catalog.trades.find((trade) => trade.id === edit.tradeId)
+      : null;
   return (
     <div>
       <h2>Distribuição semanal</h2>
@@ -407,6 +527,12 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
         <button
           disabled={busy}
           onClick={async () => {
+            if (
+              !window.confirm(
+                `Copiar a distribuição de ${addDays(week, -7)} para a semana de ${week}? Só serão preenchidas células livres; dias passados e células preenchidas serão mantidos.`,
+              )
+            )
+              return;
             setBusy(true);
             try {
               const r = await command<{
@@ -442,7 +568,14 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
               .filter((w) => w.active)
               .map((w) => (
                 <tr key={w.id}>
-                  <th>{w.name}</th>
+                  <th scope="row" className="planning-worker">
+                    <span>{w.name}</span>
+                    <small>
+                      Ofício habitual:{" "}
+                      {catalog.trades.find((t) => t.id === w.tradeId)?.name ??
+                        "Não definido"}
+                    </small>
+                  </th>
                   {days.map((day) => {
                     const cell = cells.find(
                       (c) => c.workerId === w.id && c.day.startsWith(day),
@@ -465,13 +598,12 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
                             ? catalog.sites.find((s) => s.id === cell.siteId)
                                 ?.name
                             : "Livre"}
-                          {cell?.tradeId && (
-                            <small>
-                              {
-                                catalog.trades.find(
-                                  (t) => t.id === cell.tradeId,
-                                )?.name
-                              }
+                          {cell?.tradeId && cell.tradeId !== w.tradeId && (
+                            <small className="planning-outside-trade">
+                              <span aria-hidden="true">⚠ </span>
+                              Fora da função:{" "}
+                              {catalog.trades.find((t) => t.id === cell.tradeId)
+                                ?.name ?? "Ofício não disponível"}
                             </small>
                           )}
                         </button>
@@ -520,13 +652,40 @@ function Planning({ me, catalog }: { me: CurrentUser; catalog: Catalog }) {
           </label>
           <label>
             Ofício
-            <select name="tradeId" defaultValue={edit.tradeId ?? ""}>
+            <select
+              name="tradeId"
+              value={
+                edit.tradeId === editingWorker?.tradeId
+                  ? ""
+                  : (edit.tradeId ?? "")
+              }
+              onChange={(event) =>
+                setEdit({
+                  ...edit,
+                  tradeId: event.target.value
+                    ? Number(event.target.value)
+                    : null,
+                })
+              }
+            >
               <Choices
-                items={catalog.trades.filter((t) => t.active)}
-                empty="Ofício habitual"
+                items={catalog.trades.filter(
+                  (t) =>
+                    t.id !== editingWorker?.tradeId &&
+                    (t.active || t.id === edit.tradeId),
+                )}
+                empty={`Ofício habitual: ${habitualTrade?.name ?? "Não definido"}`}
               />
             </select>
           </label>
+          {outsideTrade && (
+            <p className="planning-outside-trade" role="status">
+              <span aria-hidden="true">⚠ </span>
+              Fora da função habitual: {editingWorker?.name} é{" "}
+              {habitualTrade?.name ?? "de ofício não definido"} e será alocado
+              como {outsideTrade.name}.
+            </p>
+          )}
           <button disabled={busy}>Guardar distribuição</button>
           {edit.id && (
             <button
