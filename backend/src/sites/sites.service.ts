@@ -1,49 +1,55 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service";
-import type { CurrentUser } from "../identity/identity";
-import type { Prisma } from "../generated/prisma/client";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { TenantService } from '../database/tenant.service';
+import type { Prisma } from '../generated/prisma/client';
+import type { CurrentUser } from '../identity/identity';
 
-function scope(user: CurrentUser): Prisma.SiteWhereInput {
-  if (user.role === "admin") return {};
-  const day = new Intl.DateTimeFormat("en-CA", {
-    timeZone: user.time_zone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  const today = new Date(`${day}T00:00:00Z`);
-  return {
-    responsibilities: {
-      some: {
-        userId: user.id,
-        startsOn: { lte: today },
-        OR: [{ endsOn: null }, { endsOn: { gte: today } }],
-      },
-    },
-  };
-}
 @Injectable()
 export class SitesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly tenant: TenantService) {}
 
   findAll(user: CurrentUser) {
-    return this.prisma.inCompany(user.company_id, (tx) =>
+    return this.tenant.inCompany(user.company_id, (tx) =>
       tx.site.findMany({
-        where: scope(user),
+        where: this.buildScope(user),
         select: { id: true, name: true },
-        orderBy: { name: "asc" },
+        orderBy: { name: 'asc' },
       }),
     );
   }
 
   async findOne(user: CurrentUser, id: number) {
-    const site = await this.prisma.inCompany(user.company_id, (tx) =>
+    const site = await this.tenant.inCompany(user.company_id, (tx) =>
       tx.site.findFirst({
-        where: { ...scope(user), id },
+        where: { ...this.buildScope(user), id },
         select: { id: true, name: true },
       }),
     );
-    if (!site) throw new NotFoundException("Obra não encontrada.");
+    if (!site) {
+      throw new NotFoundException('Obra não encontrada.');
+    }
     return site;
   }
+
+  private buildScope(user: CurrentUser): Prisma.SiteWhereInput {
+    if (user.role === 'admin') {
+      return {};
+    }
+    const day = new Intl.DateTimeFormat('en-CA', {
+      timeZone: user.time_zone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const today = new Date(`${day}T00:00:00Z`);
+    return {
+      responsibilities: {
+        some: {
+          userId: user.id,
+          startsOn: { lte: today },
+          OR: [{ endsOn: null }, { endsOn: { gte: today } }],
+        },
+      },
+    };
+  }
 }
+

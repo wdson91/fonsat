@@ -3,12 +3,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { createApp } from "../src/app";
+import { TenantService } from "../src/database/tenant.service";
 import { PrismaService } from "../src/database/prisma.service";
 import type { DemoUser, Role } from "../src/identity/identity";
 
 describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
   let app: INestApplication;
   let db: PrismaService;
+  let tenant: TenantService;
   let users: DemoUser[];
   let companyA: number;
   let companyB: number;
@@ -18,6 +20,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     app = await createApp();
     await app.init();
     db = app.get(PrismaService);
+    tenant = app.get(TenantService);
     const response = await request(app.getHttpServer()).get("/api/demo-users");
     expect(response.status).toBe(200);
     users = response.body;
@@ -112,7 +115,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     const response = await request(app.getHttpServer())
       .get("/api/sites")
       .set("X-User-Id", String(user("admin").id));
-    const expected = await db.inCompany(companyA, (tx) => tx.site.findMany());
+    const expected = await tenant.inCompany(companyA, (tx) => tx.site.findMany());
     expect(response.status).toBe(200);
     expect(response.body.map((s: { id: number }) => s.id).sort()).toEqual(
       expected.map((s) => s.id).sort(),
@@ -129,7 +132,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     ]);
   });
   it("o encarregado recebe 404 para a obra de outro responsável", async () => {
-    const other = await db.inCompany(companyA, (tx) =>
+    const other = await tenant.inCompany(companyA, (tx) =>
       tx.site.findFirstOrThrow({ where: { name: "Armazém Norte" } }),
     );
     expect(
@@ -143,7 +146,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
   it.each(["admin", "foreman"] as const)(
     "o perfil %s recebe 404 para identificadores de outra empresa",
     async (role) => {
-      const other = await db.inCompany(companyB, (tx) =>
+      const other = await tenant.inCompany(companyB, (tx) =>
         tx.site.findFirstOrThrow(),
       );
       expect(
@@ -179,7 +182,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
   });
   it("isola uma consulta sem filtro e não deixa contexto na conexão", async () => {
     for (const company of [companyA, companyB, companyA]) {
-      const rows = await db.inCompany(company, (tx) => tx.site.findMany());
+      const rows = await tenant.inCompany(company, (tx) => tx.site.findMany());
       expect(rows.length).toBeGreaterThan(0);
       expect(rows.every((row) => row.companyId === company)).toBe(true);
     }
@@ -191,7 +194,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     );
     const results = await Promise.all(
       companies.map((company) =>
-        db.inCompany(company, (tx) => tx.site.findMany()),
+        tenant.inCompany(company, (tx) => tx.site.findMany()),
       ),
     );
     results.forEach((rows, i) => {
@@ -202,17 +205,17 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
   });
   it("uma falha de transação não conserva o tenant", async () => {
     await expect(
-      db.inCompany(companyA, async () => {
+      tenant.inCompany(companyA, async () => {
         throw new Error("rollback intencional");
       }),
     ).rejects.toThrow("rollback intencional");
     expect(await db.site.findMany()).toEqual([]);
   });
   it("o banco impede alterar ou criar obras de outra empresa", async () => {
-    const other = await db.inCompany(companyB, (tx) =>
+    const other = await tenant.inCompany(companyB, (tx) =>
       tx.site.findFirstOrThrow(),
     );
-    const changed = await db.inCompany(companyA, (tx) =>
+    const changed = await tenant.inCompany(companyA, (tx) =>
       tx.site.updateMany({
         where: { id: other.id },
         data: { name: "Não pode mudar" },
@@ -220,7 +223,7 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     );
     expect(changed.count).toBe(0);
     await expect(
-      db.inCompany(companyA, (tx) =>
+      tenant.inCompany(companyA, (tx) =>
         tx.site.create({
           data: { companyId: companyB, name: "Não pode criar" },
         }),
@@ -228,18 +231,18 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     ).rejects.toThrow();
     expect(
       (
-        await db.inCompany(companyB, (tx) =>
+        await tenant.inCompany(companyB, (tx) =>
           tx.site.findUniqueOrThrow({ where: { id: other.id } }),
         )
       ).name,
     ).toBe(other.name);
   });
   it("chaves compostas recusam responsabilidade com utilizador de outra empresa", async () => {
-    const site = await db.inCompany(companyA, (tx) =>
+    const site = await tenant.inCompany(companyA, (tx) =>
       tx.site.findFirstOrThrow(),
     );
     await expect(
-      db.inCompany(companyA, (tx) =>
+      tenant.inCompany(companyA, (tx) =>
         tx.siteResponsibility.create({
           data: {
             companyId: companyA,
@@ -261,6 +264,6 @@ describe("Identidade, permissões e isolamento com PostgreSQL real", () => {
     expect(await db.$queryRaw`SELECT * FROM public.app_demo_users()`).toEqual(
       before,
     );
-    expect(await db.inCompany(companyA, (tx) => tx.site.count())).toBe(2);
+    expect(await tenant.inCompany(companyA, (tx) => tx.site.count())).toBe(2);
   });
 });

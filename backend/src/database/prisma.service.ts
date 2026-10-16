@@ -1,28 +1,27 @@
-import { Injectable, OnModuleDestroy } from "@nestjs/common";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Prisma, PrismaClient } from "../generated/prisma/client";
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../generated/prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleDestroy {
-  constructor() {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) throw new Error("DATABASE_URL é obrigatório.");
-    super({ adapter: new PrismaPg({ connectionString, max: 5 }) });
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  constructor(configService: ConfigService) {
+    const adapter = new PrismaPg({
+      connectionString: configService.getOrThrow<string>('DATABASE_URL'),
+      max: 5,
+    });
+    super({ adapter });
   }
-  // O contexto fica preso à mesma transação/conexão e desaparece no fim.
-  inCompany<T>(
-    companyId: number,
-    operation: (tx: Prisma.TransactionClient) => Promise<T>,
-  ): Promise<T> {
-    return this.$transaction(
-      async (tx) => {
-        await tx.$queryRaw`SELECT set_config('app.company_id', ${String(companyId)}, true)`;
-        return operation(tx);
-      },
-      { maxWait: 5000, timeout: 10000 },
-    );
+
+  async onModuleInit() {
+    await this.$connect();
   }
+
   async onModuleDestroy() {
     await this.$disconnect();
   }
+
 }
