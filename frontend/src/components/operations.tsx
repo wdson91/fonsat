@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { Billing } from "./billing";
 import { Team } from "./team";
 import { api, type CurrentUser } from '../lib/api';
 import { addDays, command, companyDay, monday, type Allocation, type Catalog, type Named } from '../lib/operations';
@@ -10,9 +11,10 @@ export function Operations({ me }: { me: CurrentUser }) {
     <nav className="operation-tabs" aria-label="Áreas de trabalho">
       <button onClick={() => setTab('planning')} aria-pressed={tab === 'planning'}>Distribuição</button>
       <button onClick={() => setTab('team')} aria-pressed={tab === 'team'}>Equipa e pendências</button>
+      {me.role === 'admin' && <button onClick={() => setTab('billing')} aria-pressed={tab === 'billing'}>Preços e rascunhos</button>}
       {me.role === 'admin' && <button onClick={() => setTab('catalog')} aria-pressed={tab === 'catalog'}>Cadastros</button>}
     </nav>
-    {tab === 'team' ? <Team key={me.id + tab} me={me}/> : tab && <CatalogArea key={me.id + tab} me={me} planning={tab === 'planning'} />}
+    {tab === 'billing' ? <Billing key={me.id + tab} me={me}/> : tab === 'team' ? <Team key={me.id + tab} me={me}/> : tab && <CatalogArea key={me.id + tab} me={me} planning={tab === 'planning'} />}
   </section>;
 }
 export function Choices({ items, empty = 'Selecionar…' }: { items: Named[] | {id:number; name:string}[]; empty?: string }) {
@@ -47,7 +49,7 @@ function CatalogEditor({ me, catalog, refresh }: { me: CurrentUser; catalog: Cat
       <label>Nome<input name="name" required maxLength={500} defaultValue={item?.name}/></label>
       <label><input type="checkbox" name="active" defaultChecked={item?.active ?? true}/> Ativo</label>
       {kind === 'workers' && <><label>Ofício habitual<select name="tradeId" required defaultValue={item && 'tradeId' in item ? String(item.tradeId) : ''}><Choices items={catalog.trades.filter(t => t.active)}/></select></label><label>Utilizador<select name="userId" defaultValue={item && 'userId' in item ? String(item.userId ?? '') : ''}><Choices items={catalog.users.filter(u => u.role === 'worker')} empty="Sem utilizador"/></select></label></>}
-      {kind === 'clients' && <label>NIF<input name="taxId" defaultValue={item && 'taxId' in item ? String(item.taxId) : ''}/></label>}
+      {kind === 'clients' && <><label>NIF<input name="taxId" defaultValue={item && 'taxId' in item ? String(item.taxId) : ''}/></label><label>Utilizador cliente<select name="userId" defaultValue={item && 'userId' in item ? String(item.userId ?? '') : ''}><Choices items={catalog.users.filter(u=>u.role==='client')} empty="Sem utilizador"/></select></label></>}
       {kind === 'sites' && <><label>Cliente<select name="clientId" required defaultValue={item && 'clientId' in item ? String(item.clientId ?? '') : ''}><Choices items={catalog.clients.filter(c => c.active)}/></select></label><label>Local<input name="location" defaultValue={item && 'location' in item ? String(item.location) : ''}/></label></>}
       <button className="primary" disabled={busy}>{editing ? 'Guardar alterações' : 'Criar'}</button>{editing && <button type="button" onClick={() => setEditing(null)}>Cancelar</button>}
     </form>

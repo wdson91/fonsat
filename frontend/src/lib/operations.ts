@@ -2,7 +2,7 @@ import { api } from './api';
 export interface Named { id: number; name: string; active: boolean }
 export interface Worker extends Named { tradeId: number; userId: number | null }
 export interface WorkSite extends Named { clientId: number | null; location: string }
-export interface Client extends Named { taxId: string }
+export interface Client extends Named { taxId: string; userId: number|null }
 export interface Catalog { workers: Worker[]; trades: Named[]; sites: WorkSite[]; clients: Client[]; users: { id: number; name: string; role: string }[]; responsibilities: { id: number; siteId: number; userId: number; startsOn: string; endsOn: string | null }[] }
 export interface Allocation { id: number; workerId: number; siteId: number; tradeId: number | null; day: string }
 export const command = <T>(id: number, path: string, method: string, body: unknown) => api<T>(path, id, undefined, { method, body: JSON.stringify(body) });
