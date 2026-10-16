@@ -1,3 +1,4 @@
+import { PlanningModule } from './planning/planning.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -14,6 +15,7 @@ import { SitesModule } from './sites/sites.module';
     IdentityModule,
     SitesModule,
     CatalogModule,
+    PlanningModule,
   ],
 })
 export class AppModule {}
