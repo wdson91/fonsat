@@ -10,6 +10,6 @@ As operações de obras estão disponíveis apenas ao administrativo e ao encarr
 
 A API usa `fonsat_app`, sem privilégios de proprietário, superutilizador ou BYPASSRLS. As tabelas de negócio têm políticas por empresa e referências compostas. As funções de resolução da identidade usam privilégios limitados do proprietário e devolvem só os campos declarados; o seu `search_path` é fixo e as tabelas são qualificadas.
 
-Toda futura operação de negócio deve usar `PrismaService.inCompany`, com a empresa da identidade resolvida pelo guard. O contexto é aplicado por `set_config(..., true)` na mesma transação e conexão que executa as consultas. Não transportar contexto empresarial por estado global ou `SET` de sessão. A conta de migrações e seed fica no serviço de arranque `setup`, fora da API.
+Toda futura operação de negócio deve usar `TenantService.inCompany`, com a empresa da identidade resolvida pelo guard. O contexto é aplicado por `set_config(..., true)` na mesma transação e conexão que executa as consultas. Não transportar contexto empresarial por estado global ou `SET` de sessão. A conta de migrações e seed fica no serviço de arranque `setup`, fora da API.
 
 Os testes provam consultas sem filtros, tentativas de escrita noutra empresa, referências cruzadas, rollback e operações concorrentes. Os dados e os identificadores mantêm-se ao repetir o seed.

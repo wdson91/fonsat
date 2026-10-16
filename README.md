@@ -18,7 +18,7 @@ A pasta local `fonsat/` contém o projeto anterior usado como referência de com
 
 Preparar o ambiente reproduzível e implementar «Quem está a usar?», seleção dos quatro perfis, identidade resolvida no servidor e isolamento entre empresas. A seleção é própria de uma demonstração sem login.
 
-O histórico será construído com commits durante o desenvolvimento, por entrega validada. As fases de distribuição, marcações e faturação serão implementadas em entregas posteriores.
+As fases 2 a 5 também estão implementadas: cadastros e distribuição semanal, relógio de ponto com fila local, correções versionadas e preços/rascunhos. A utilização e a validação estão em [docs/fases-2-5.md](docs/fases-2-5.md). O histórico contém commits por comportamento.
 
 A primeira entrega está concluída. As instruções e os resultados de validação estão abaixo e em `docs/progresso.md`.
 
@@ -50,7 +50,7 @@ O ecrã «Quem está a usar?» agrupa os utilizadores por empresa. Na FONSAT, Jo
 
 A escolha fica guardada no browser e pode ser trocada no topo ou limpa em «Escolher outro utilizador». A identidade é enviada em `X-User-Id`; a API resolve o papel e a empresa. O administrativo vê as obras da empresa, e cada encarregado só as obras sob a sua responsabilidade ativa. As duas empresas têm obras de nomes iguais para tornar o teste de isolamento mais evidente.
 
-Nesta entrega, o trabalhador e o cliente têm o seu ambiente de entrada. O registo de ponto e a consulta de faturas ainda não estão implementados. As regras da identidade e do banco estão em [docs/identidade-e-isolamento.md](docs/identidade-e-isolamento.md).
+O trabalhador dispõe de relógio de ponto e horas da semana. Administrativo e encarregado acedem às áreas de distribuição e equipa; o administrativo também gere cadastros, preços e rascunhos. A consulta e emissão financeira são desenvolvidas na entrega paralela das fases 6/7. As regras da identidade e do banco estão em [docs/identidade-e-isolamento.md](docs/identidade-e-isolamento.md).
 
 ## Testes no navegador
 
@@ -61,7 +61,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Validam os quatro perfis, seleção por teclado, persistência após reload, troca entre empresas, 404 por identificador de outra empresa e layout móvel. Os testes desta fase não emitem documentos nem apagam dados operacionais. Relatórios, screenshots e traces ficam em `frontend/playwright-report` e `frontend/test-results`, fora do Git. Para usar um Chromium já instalado, definir `PLAYWRIGHT_CHROMIUM_EXECUTABLE` com o caminho do executável.
+Validam os quatro perfis, seleção por teclado, persistência após reload, troca entre empresas, 404 por identificador de outra empresa e layout móvel. Os novos cenários criam cadastros e marcações; os cenários financeiros também emitem documentos de exemplo. Executar contra uma instalação de testes. Relatórios, screenshots e traces ficam em `frontend/playwright-report` e `frontend/test-results`, fora do Git. Para usar um Chromium já instalado, definir `PLAYWRIGHT_CHROMIUM_EXECUTABLE` com o caminho do executável.
 
 ## Histórico para revisão
 
