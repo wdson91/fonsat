@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../generated/prisma/client';
-import type { CurrentUser } from '../identity/identity';
-import type { InvoiceSource } from '../invoices/invoice-source';
-import type { FinancialEntry } from '../invoices/invoice-engine';
+import { Injectable } from "@nestjs/common";
+import type { Prisma } from "../generated/prisma/client";
+import type { CurrentUser } from "../identity/identity";
+import type { InvoiceSource } from "../invoices/invoice-source";
+import type { FinancialEntry } from "../invoices/invoice-engine";
 @Injectable()
 export class OperationalInvoiceSource implements InvoiceSource {
   async exclusions(
@@ -13,7 +13,7 @@ export class OperationalInvoiceSource implements InvoiceSource {
     const rows = await tx.draftExclusion.findMany({
       where: { draft: { clientId, period } },
       include: { author: { select: { name: true } } },
-      orderBy: { entryId: 'asc' },
+      orderBy: { entryId: "asc" },
     });
     return rows.map((row) => ({
       entryId: row.entryId,
@@ -25,7 +25,7 @@ export class OperationalInvoiceSource implements InvoiceSource {
   clients(tx: Prisma.TransactionClient, _actor: CurrentUser) {
     return tx.client.findMany({
       select: { id: true, name: true },
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
   }
   async clientForUser(tx: Prisma.TransactionClient, actor: CurrentUser) {
@@ -38,11 +38,11 @@ export class OperationalInvoiceSource implements InvoiceSource {
     companyId: number,
   ): Promise<FinancialEntry[]> {
     const entries = await tx.workEntry.findMany({
-      where: { companyId },
+      where: { companyId, activity: "work" },
       include: {
         worker: true,
         versions: {
-          orderBy: { number: 'desc' },
+          orderBy: { number: "desc" },
           take: 1,
           include: {
             site: { include: { client: true } },
@@ -66,7 +66,7 @@ export class OperationalInvoiceSource implements InvoiceSource {
         id: entry.id,
         version: entry.currentVersion,
         clientId: v.site.clientId ?? 0,
-        clientName: v.site.client?.name ?? 'Sem cliente',
+        clientName: v.site.client?.name ?? "Sem cliente",
         siteId: v.siteId,
         siteName: v.site.name,
         tradeId: v.tradeId,
@@ -80,10 +80,10 @@ export class OperationalInvoiceSource implements InvoiceSource {
         startAt: v.startAt?.toISOString() ?? null,
         endAt: v.endAt?.toISOString() ?? null,
         minutes: v.minutes ?? 0,
-        status: v.minutes === null ? 'incomplete' : 'closed',
+        status: v.minutes === null ? "incomplete" : "closed",
         reason: v.reason,
-        correctedBy: v.source === 'manual' ? v.author.name : null,
-        correctedAt: v.source === 'manual' ? v.createdAt.toISOString() : null,
+        correctedBy: v.source === "manual" ? v.author.name : null,
+        correctedAt: v.source === "manual" ? v.createdAt.toISOString() : null,
       };
     });
   }

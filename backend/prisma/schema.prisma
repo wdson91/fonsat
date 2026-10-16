@@ -150,6 +150,7 @@ model Allocation {
 }
 
 model WorkEntry {
+  activity String @default("work")
   exclusions DraftExclusion[]
   id String @id @db.Uuid
   companyId Int @map("company_id")
