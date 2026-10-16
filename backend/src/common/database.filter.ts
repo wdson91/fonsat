@@ -3,6 +3,7 @@ import { Prisma } from '../generated/prisma/client';
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class DatabaseFilter implements ExceptionFilter {
   catch(error: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+    const reading = host.switchToHttp().getRequest<{ method: string }>().method === 'GET';
     const conflict = ['P2002', 'P2004', 'P2034'].includes(error.code);
     const status = conflict
       ? 409
@@ -23,7 +24,7 @@ export class DatabaseFilter implements ExceptionFilter {
             ? 'Registo não encontrado.'
             : status === 400
               ? 'Referência inválida.'
-              : 'Não foi possível guardar os dados.',
+              : reading ? 'Não foi possível carregar os dados.' : 'Não foi possível guardar os dados.',
       });
   }
 }

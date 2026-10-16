@@ -42,8 +42,9 @@ export function Team({ me }: { me: CurrentUser }) {
       });
     return () => c.abort();
   }, [me.id, revision]);
-  const reload = () => {
+  const reload = (clearMessage = true) => {
     setEditing(null);
+    if (clearMessage) setMessage('');
     refresh((n) => n + 1);
   };
   async function correct(form: HTMLFormElement) {
@@ -61,7 +62,7 @@ export function Team({ me }: { me: CurrentUser }) {
         reason: body.reason,
       });
       setMessage('Correção guardada; o original foi preservado.');
-      reload();
+      reload(false);
     } catch (e) {
       setMessage((e as Error).message);
       if (e instanceof ApiError && e.status === 409) setStale(true);
@@ -81,13 +82,13 @@ export function Team({ me }: { me: CurrentUser }) {
           />{' '}
           Só pendências
         </label>
-        <button disabled={busy} onClick={reload}>
+        <button disabled={busy} onClick={() => reload()}>
           Atualizar equipa
         </button>
       </div>
       {message && <p role="alert">{message}</p>}
       {!data ? (
-        <p>A carregar a equipa…</p>
+        <p>{message ? 'Não foi possível carregar a equipa. Use Atualizar equipa para tentar novamente.' : 'A carregar a equipa…'}</p>
       ) : (
         <>
           <h3>Sem entrada hoje</h3>

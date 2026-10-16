@@ -132,7 +132,7 @@ export function Billing({ me }: { me: CurrentUser }) {
       <h2>Preços e faturação mensal</h2>
       {message && <p role="alert">{message}</p>}
       {!catalog ? (
-        <p>A carregar preços…</p>
+        message ? <button onClick={() => { setMessage(''); refresh((n) => n + 1); }}>Tentar carregar preços</button> : <p>A carregar preços…</p>
       ) : (
         <>
           <details>
